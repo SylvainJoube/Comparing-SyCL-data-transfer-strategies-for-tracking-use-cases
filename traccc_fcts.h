@@ -480,7 +480,7 @@ namespace traccc {
 
     void read_cells_lite() {
         std::string wdir_tmp = std::filesystem::current_path();
-        std::string bin_path = wdir_tmp + "/events_bin/lite_all_events.bin";
+        std::string bin_path = wdir_tmp + "/input/lite_all_events.bin";
         read_cells_lite(bin_path);
     }
 
@@ -876,7 +876,7 @@ namespace traccc {
         } else { // flatten
             chrono_flatten.reset();
 
-            log("FLATTEN ===== SIZES :");
+            log("===== FLATTEN SIZES :");
             log("flat_input.cells = " + std::to_string(total_cell_count * sizeof(input_cell)));
             log("flat_output.cells = " + std::to_string(total_cell_count * sizeof(output_cell)));
             log("flat_input.modules = " + std::to_string(total_module_count * sizeof(flat_input_module)));
@@ -1883,7 +1883,7 @@ namespace traccc {
         /*
         Fait lors du lancement des tests.  -> read_cells_lite();
         std::string wdir_tmp = std::filesystem::current_path();
-        std::string bin_path = wdir_tmp + "/events_bin/lite_all_events.bin";
+        std::string bin_path = wdir_tmp + "/input/lite_all_events.bin";
         read_cells_lite(bin_path);*/
 
         // TODO : repeat_count pour les lire plusieurs fois
@@ -2090,7 +2090,7 @@ namespace traccc {
             //     + "flatAlloc(" + std::to_string(cres.t_flatten_alloc / fdiv) + ") "
             //     + "fillAlloc(" + std::to_string(cres.t_flatten_fill / fdiv) + ") ");
 
-            //log("");
+            log("");
         }
 
     }
@@ -2154,8 +2154,7 @@ namespace traccc {
     int main_of_traccc( const std::string & OUTPUT_FILE_NAME, std::function<void(std::ofstream &)> bench_function) {
         std::ofstream myfile;
         std::string wdir_tmp = std::filesystem::current_path();
-        //std::string wdir = wdir_tmp + "/output/";
-        std::string wdir = wdir_tmp + "/"; // modif 2022-11-30
+        std::string wdir = wdir_tmp + "/output/";
         std::string output_file_path = wdir + std::string(OUTPUT_FILE_NAME);
 
         if ( file_exists_test0(output_file_path) ) {

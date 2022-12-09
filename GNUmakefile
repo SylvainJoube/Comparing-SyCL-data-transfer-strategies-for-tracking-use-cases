@@ -4,12 +4,10 @@
 #   dpcpp
 #   syclcc
 
-# Ensure needed directories
-$(shell mkdir -p bin output)
-
 # Executables
+HDRS = $(wildcard *.h)
 SRCS = $(wildcard *.cpp)
-EXES = $(patsubst %.cpp, bin/%.exe, $(SRCS))
+EXES = $(patsubst %.cpp,bin/%.exe,$(SRCS))
 
 # Options
 CXX = $(SBENCH_SYCL_COMPILER_CMD)
@@ -23,11 +21,9 @@ check-env:
 
 build: check-env $(EXES)
 
-ls: 
-	@bin/bench-ls.exe
-
 clean: 
-	rm -f $(EXES)
+	-rm -f $(EXES)
+	-rm -f bin/*.exe
 
 verbose:
 	@echo SRCS: $(SRCS)
@@ -38,6 +34,6 @@ verbose:
 ## Implicit rules
 #############################################################################
 
-bin/%.exe: %.cpp
+bin/%.exe: %.cpp $(HDRS)
 	@rm -f $@
 	$(CXX) $(CXXFLAGS) -o $@ $<

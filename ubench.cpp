@@ -24,16 +24,16 @@
 int main(int argc, char *argv[])
 {
 
-    
-
     init_computers();
+    log("");
     log("========~~~~~~~ VERSION " + DISPLAY_VERSION + " ~~~~~~~========");
-    log("argc = " + std::to_string(argc));
-    //assert(argc==3) ;
-    runtime_environment.repeat_load_count = atoi(argv[2]);
 
+    assert(argc==2) ;
 
-    select_device_generic(exception_handler);
+    int device = atoi(argv[1]);
+    selector_list_devices_generic dev_list_select2{device};
+    cl::sycl::queue temp_queue2(dev_list_select2, exception_handler);
+    log("device: " + std::to_string(device));
 
     log("");
     log("=== Currently running on computer: " + runtime_environment.computer_name + " ===");
@@ -57,28 +57,6 @@ int main(int argc, char *argv[])
     //total_elements = 1024L * 1024L * 128L; // 128 milions elements * 4 bytes => 512 MiB
     //std::string size_str = "512MiB";
     
-    // g_size_str and total_elements are defined in list_devices()
-
-    log("Load count value (traccc): (suggested = " + std::to_string(runtime_environment.repeat_load_count) + ")");
-    std::string in_ld_value;
-    std::cin >> in_ld_value;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-
-    if (is_number(in_ld_value)) {
-        runtime_environment.repeat_load_count = atoi(in_ld_value.data());
-        base_traccc_repeat_load_count = runtime_environment.repeat_load_count;
-    } else {
-        log("WARNING: invalid value: '" + in_ld_value + "'. Will now switch to default value: "
-            + std::to_string(runtime_environment.repeat_load_count) + "\n");
-    }
-
-    log("Selected load count value (traccc): " + std::to_string(runtime_environment.repeat_load_count));
-    press_enter_to_continue();
-
-    // -- version David --
-    // Paramétrer l'environnement runtime_environment
-    traccc::run_all_traccc_acat_benchs_generic();
-
     ubench_v2::run_ubench2_tests(runtime_environment.computer_name, runtime_environment.runs_count);
 
     return 0;

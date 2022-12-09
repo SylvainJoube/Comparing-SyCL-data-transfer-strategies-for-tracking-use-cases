@@ -514,7 +514,7 @@ namespace ubench_v2 {
     int main_of_bench_v2(std::string fname) { //std::function<void(std::ofstream &)> bench_function) {
         std::ofstream myfile;
         std::string wdir_tmp = std::filesystem::current_path();
-        std::string wdir = wdir_tmp + "/"; // "/output" removed on 2022-11-30
+        std::string wdir = wdir_tmp + "/output/" ;
         std::string output_file_path = wdir + std::string(fname);
 
         if ( file_exists_test0(output_file_path) ) {

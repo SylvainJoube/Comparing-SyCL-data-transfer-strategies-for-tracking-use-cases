@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 # Hello world python program
 
@@ -14,7 +14,10 @@ import statistics as stat
 FLAT_ONLY = True
 tableau_horizontal = True # vertical pas encore géré
 
-VERSION_ATTENDUE = 2
+VERSION_ATTENDUE = 108
+CHECK_VERSION = False
+
+computer_name = "cassidi" # aussi utilisé pour le nom du fichier d'entrée
 
 # TODO affichage de la figure 4 et 3
 # Il faut charger deux fichiers, un flatten et l'autre graphPtr.
@@ -26,9 +29,7 @@ VERSION_ATTENDUE = 2
 # ============= Gestion de la taille
 my_dpi = 96
 output_image_name = "le nom de ma belle image"
-output_image_name_ver = "6_br" # 3_dl
-
-computer_name = "cassidi" # aussi utilisé pour le nom du fichier d'entrée
+output_image_name_ver = "ACAT-v2" #"5-4_brouillon" # 3_dl
 
 image_width = 1280
 image_height = 1
@@ -36,13 +37,13 @@ image_scale_factor = image_width / 640
 line_width = image_scale_factor * 1.5
 
 if FLAT_ONLY:
-    image_height = (image_width / 640) * 220 # 160 #198
+    image_height = (image_width / 640) * 160 #198
     plt.figure(figsize=(image_width/my_dpi, image_height/my_dpi) , dpi=my_dpi)
-    output_image_name = "ubench2_" + computer_name + "_onlyFlat" + output_image_name_ver + ".png"
+    output_image_name = "sparseccl_onlyFlat_" + output_image_name_ver + "_" + computer_name + ".png"
 else:
     image_height = (image_width / 640) * 258 # 273
     plt.figure(figsize=(image_width/my_dpi, image_height/my_dpi), dpi=my_dpi)
-    output_image_name = "ubench2_" + computer_name + "_ptrAndFlat" + output_image_name_ver + ".png"
+    output_image_name = "sparseccl_ptrAndFlat_" + output_image_name_ver + "_" + computer_name + ".png"
 
 MY_SIZE = (10 * image_scale_factor)
 TITLE_SIZE = (12 * image_scale_factor)
@@ -87,14 +88,15 @@ def load_file(filename, isFlatten, multiplyFactor):
     global global_kernel_retain
     global VERSION_ATTENDUE
 
-    # absolute_filepath = "/home/data_sync/academique/These/SYCL_tests/mem_bench/output/" + filename
-    absolute_filepath = "../output/" + filename
+    # absolute_filepath = "../output/" + filename
+    absolute_filepath = "output/" + filename
+
 
     with open(absolute_filepath) as fp:
         version = fp.readline() # version du fichier actuel (doit être 106 et non plus 105)
         print("Version du fichier : {}".format(version))
 
-        if (int(version) != VERSION_ATTENDUE):
+        if ( (int(version) != VERSION_ATTENDUE) and CHECK_VERSION ):
             #print("ERREUR, VERSION DU FICHIER NON COMPATIBLE : " + str(int(version)) + ".  VERSION ATTENDUE = 106")
             sys.exit("ERREUR, VERSION DU FICHIER NON COMPATIBLE : " + str(int(version)) + ".  VERSION ATTENDUE = " + str(VERSION_ATTENDUE))
 
@@ -109,13 +111,13 @@ def load_file(filename, isFlatten, multiplyFactor):
             print(header_split_words)
 
             header = {} # dictionnaire vide
-            header["in_total_size"] = header_split_words[0]
-            header["out_total_size"] = header_split_words[1]
-            header["b_INPUT_OUTPUT_FACTOR"] = header_split_words[2]
-            header["REPEAT_COUNT_REALLOC"] = header_split_words[3]
-            header["sycl_mode"] = int(header_split_words[4])
-            header["explicit_copy"] = int(header_split_words[5]) # 1 pour oui, 0 pour non
-
+            header["DATASET_NUMBER"] = header_split_words[0]
+            header["in_total_size"] = header_split_words[1]
+            header["out_total_size"] = header_split_words[2]
+            # skip 2 champs
+            header["REPEAT_COUNT_REALLOC"] = header_split_words[5]
+            # skip 3 champs
+            header["sycl_mode"] = int(header_split_words[9])
             print("---- SYCL mode = " + str(header["sycl_mode"]) + "----")
             print("SYCL mode = " + usm_code_to_str(header["sycl_mode"]))
             # if (header["sycl_mode"] == 0):  print("SYCL mode = shared")
@@ -125,9 +127,11 @@ def load_file(filename, isFlatten, multiplyFactor):
             # if (header["sycl_mode"] == 20): print("SYCL mode = CPU")
             # 0 shared, 1 device, 2 host, 3 accessors, 20 glibc
             # skip 5 champs
+            header["mstrat"] = header_split_words[15]
+            header["implicit_use_unique_module"] = header_split_words[16]
             header["iterations"] = [] # liste d'itérations
 
-            # header["IS_FLATTEN"] = isFlatten # True or False
+            header["IS_FLATTEN"] = isFlatten # True or False
 
             #print(header)
 
@@ -182,9 +186,37 @@ def load_file(filename, isFlatten, multiplyFactor):
 #print("header_list:")
 #print(header_list)
 
-# Chargement des résultats
-# load_file('ubench2_2_sandor_6GiB_RUN1.t', True, 1)
-load_file('ubench2_2_' + computer_name + '_6GiB_RUN1.t', True, 1)
+# Chargement des résultats en flatten
+# load_file('acts06_generalFlatten_blopNvidia_AT_ld100_RUN1.t', True)
+#load_file('sandor_2022-02-09/acts06_generalFlatten_sandor_AT_ld100_RUN5_malloc_device_fix.t', True, 1)
+#load_file('sandor_2022-02-09/acts06_generalFlatten_sandor_AT_ld100_RUN2.t', True, 1)
+
+# Marchait avec ces 2 fichiers : (mêmes résultats que pour le papier)
+# load_file('sccl107_generalFlatten_sandor_AT_ld100_RUN1.t', True, 1) # <- papier
+# load_file('sccl107_generalGraphPtr_uniqueModules_sandor_AT_ld10_RUN1.t', False, 1) # <- papier
+
+
+
+# load_file('sccl108_generalFlatten_sandor_AT_ld100_RUN3.t', True, 1)
+# load_file('sccl107_generalFlatten_sandor_AT_ld100_RUN1.t', True, 1) # <- papier
+
+
+# décommenté par défaut :
+# load_file('sccl108_generalGraphPtr_uniqueModules_sandor_AT_ld100_RUN3.t', False, 1)
+
+load_file("sccl108_generalFlatten_" + computer_name + "_AT_ld10_RUN1.t", True, 1)
+load_file("sccl108_generalGraphPtr_uniqueModules_" + computer_name + "_AT_ld10_RUN1.t", False, 1)
+
+
+# load_file('sccl107_generalFlatten_sandor_AT_ld100_RUN1.t', True, 1)
+# load_file('sccl107_generalGraphPtr_uniqueModules_sandor_AT_ld10_RUN1.t', False, 1)
+
+# sccl108_generalGraphPtr_uniqueModules_cassidi_AT_ld100_RUN1.t
+
+
+# load_file('sccl107_generalGraphPtr_uniqueModules_sandor_AT_ld10_RUN1.t', False, 1) # <- papier
+
+#load_file('acts06_generalFlatten_sandor_AT_ld100_RUN1_2021-11-24.t', True, 1)
 
 print(" ________ AFTER LOAD :  global_kernel_count = " + str(global_kernel_count))
 
@@ -202,29 +234,33 @@ global_drawn_x_variables_number = 6 + global_kernel_retain
 # x_list = []
 # y_list = []
 
-x_list_shared_direct = []
-y_list_shared_direct = []
-y_median_shared_direct = []
+x_list_shared_flat = []
+y_list_shared_flat = []
+y_median_shared_flat = []
 
-x_list_shared_copy = []
-y_list_shared_copy = []
-y_median_shared_copy = []
+x_list_shared_ptr = []
+y_list_shared_ptr = []
+y_median_shared_ptr = []
 
-x_list_host_direct = []
-y_list_host_direct = []
-y_median_host_direct = []
+x_list_host_flat = []
+y_list_host_flat = []
+y_median_host_flat = []
 
-x_list_host_copy = []
-y_list_host_copy = []
-y_median_host_copy = []
+x_list_host_ptr = []
+y_list_host_ptr = []
+y_median_host_ptr = []
 
 x_list_device = []
 y_list_device = []
 y_median_device = []
 
-x_list_glibc = []
-y_list_glibc = []
-y_median_glibc = []
+x_list_glibc_flat = []
+y_list_glibc_flat = []
+y_median_glibc_flat = []
+
+x_list_glibc_ptr = []
+y_list_glibc_ptr = []
+y_median_glibc_ptr = []
 
 x_list_acc = []
 y_list_acc = []
@@ -237,7 +273,6 @@ x_list_curve_drawn.append("copy+ker1")
 x_list_curve_drawn.append("ker2")
 x_list_curve_drawn.append("dealloc")
 
-
 divide_by = 1000 # div par 100 seulement pour "simuler" + de données
 
 def nz(value):
@@ -249,63 +284,70 @@ def nz(value):
 # Préparation des données : sélection du run 5 uniquement
 for header in header_list:
     found = False
-    print("SYCL mode = " + usm_code_to_str(header["sycl_mode"]) + " explicit_copy = " + str(header["explicit_copy"]))
-    
+    print("SYCL mode = " + usm_code_to_str(header["sycl_mode"]) + " flatten = " + str(header["IS_FLATTEN"]))
     # print(header["sycl_mode"] + header["IS_FLATTEN"])
-    
-    # accessors
-    if header["sycl_mode"] == 3:
-        x_list = x_list_acc
-        y_list = y_list_acc
-        y_median = y_median_acc
-        found = True
 
-    # glibc
-    if header["sycl_mode"] == 20:
-        x_list = x_list_glibc
-        y_list = y_list_glibc
-        y_median = y_median_glibc
-        found = True
-
-    # device
-    if header["sycl_mode"] == 1:
-        x_list = x_list_device
-        y_list = y_list_device
-        y_median = y_median_device
-        found = True
-
-    # Copie explicite
-    if (header["explicit_copy"] == 1) :
-
-        # shared copie explicite
+    if (header["IS_FLATTEN"]) :
+        # shared flatten
         if header["sycl_mode"] == 0:
-            x_list = x_list_shared_copy
-            y_list = y_list_shared_copy
-            y_median = y_median_shared_copy
+            x_list = x_list_shared_flat
+            y_list = y_list_shared_flat
+            y_median = y_median_shared_flat
             found = True
 
-        # host copie explicite
+        # device flatten
+        if header["sycl_mode"] == 1:
+            x_list = x_list_device
+            y_list = y_list_device
+            y_median = y_median_device
+            found = True
+
+        # host flatten
         if header["sycl_mode"] == 2:
-            x_list = x_list_host_copy
-            y_list = y_list_host_copy
-            y_median = y_median_host_copy
+            x_list = x_list_host_flat
+            y_list = y_list_host_flat
+            y_median = y_median_host_flat
+            found = True
+
+        # accessors flatten
+        if header["sycl_mode"] == 3:
+            x_list = x_list_acc
+            y_list = y_list_acc
+            y_median = y_median_acc
+            found = True
+
+        # glibc flatten
+        if header["sycl_mode"] == 20:
+            x_list = x_list_glibc_flat
+            y_list = y_list_glibc_flat
+            y_median = y_median_glibc_flat
             found = True
         
-    else: # copie implicite
+        # osef glibc (20)
+        
+    else: # IS_FLATTEN = False
 
-        # shared copie implicite
+        # shared
         if header["sycl_mode"] == 0:
-            x_list = x_list_shared_direct
-            y_list = y_list_shared_direct
-            y_median = y_median_shared_direct
+            x_list = x_list_shared_ptr
+            y_list = y_list_shared_ptr
+            y_median = y_median_shared_ptr
             found = True
 
-        # host copie implicite
+        # host
         if header["sycl_mode"] == 2:
-            x_list = x_list_host_direct
-            y_list = y_list_host_direct
-            y_median = y_median_host_direct
+            x_list = x_list_host_ptr
+            y_list = y_list_host_ptr
+            y_median = y_median_host_ptr
             found = True
+        
+        # glibc graph ptr
+        if header["sycl_mode"] == 20:
+            x_list = x_list_glibc_ptr
+            y_list = y_list_glibc_ptr
+            y_median = y_median_glibc_ptr
+            found = True
+        # osef glibc (20)
         
     
     # N'est trouvé qu'une seule fois (un seul header correspond)
@@ -382,6 +424,7 @@ def draw_boxplot(name, color, y_list, y_median, linestyle):
           flierprops=dict(color=c, markeredgecolor=c),
           medianprops=dict(color=c))
 
+
 def merge_some_points(y_list):
     y_list_cpy = []
     ri = 0
@@ -432,6 +475,10 @@ def draw_curve(name, color, y_list, y_median, linestyle):
     draw_violin_plot(name, color, y_list_cpy, y_median_cpy, linestyle)
     plt.plot(range(1, 6), y_median_cpy, color=color, label=name, linestyle=linestyle, linewidth=line_width)
 
+# def draw_curve(name, color, y_list, y_median, linestyle):
+#     draw_violin_plot(name, color, y_list, y_median, linestyle)
+#     plt.plot(range(1, global_drawn_x_variables_number+1), y_median, color=color, label=name, linestyle=linestyle, linewidth=line_width)
+
 plt.rcParams['grid.linestyle'] = "-"
 plt.rcParams['grid.alpha'] = 0.15
 plt.rcParams['grid.color'] = "black" ##cccccc
@@ -439,23 +486,11 @@ plt.grid(linewidth=line_width/2)
 
 
 if FLAT_ONLY:
-    #plt.title("Microbenchmark - accessors & USM device & shared/host direct")
-    plt.title(computer_name + " - micro-benchmark - USM and accessors")
+    plt.title(computer_name + " - SparseCCL - flat arrays")
     draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
     draw_curve("accessors", "maroon", y_list_acc, y_median_acc, "dashed")
-
-    # draw_curve("USM shared copy", "blue", y_list_shared_copy, y_median_shared_copy, "dotted")
-    # draw_curve("USM host copy", "red", y_list_host_copy, y_median_host_copy, "dashdot")
-
-    draw_curve("USM shared", "blue", y_list_shared_direct, y_median_shared_direct, "dotted")
-    draw_curve("USM host", "red", y_list_host_direct, y_median_host_direct, "dashdot")
-
-
-
-
-
-    # draw_curve("USM shared direct", "blue", y_list_shared_direct, y_median_shared_direct, "solid")
-    # draw_curve("USM host direct", "red", y_list_host_direct, y_median_host_direct, "solid")
+    draw_curve("USM shared", "blue", y_list_shared_flat, y_median_shared_flat, "dotted")
+    # draw_curve("USM host", "red", y_list_host_flat, y_median_host_flat, "dashdot")
 else:
     plt.title("SparseCCL - pointer graph vs flat arrays")
     #draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
@@ -502,13 +537,21 @@ def array_value_to_str(val):
 #             st = st + " & " + array_value_to_str(su) + " \\\\"
 #     return st
 
+# def dlog(str):
+#     print("DEBUG - " + str)
+
 def draw_tab_item(cname, short_name, y_median_g):
     st = cname + " & "
     ssum = 0
+    # dlog("")
+    # dlog("cname = " + cname)
+    # dlog("global_drawn_x_variables_number = " + str(global_drawn_x_variables_number))
+    # dlog("len(y_median_g) = " + str(len(y_median_g)))
+
     # Les premiers champs + 2 kernels
     for im in range(global_drawn_x_variables_number): # de 0 à 5 compris
-        # prendre le kernel2 aussi if (im != 5):
-        ssum += round(y_median_g[im]) # ne pas prendre en compte ker2
+
+        ssum += round(y_median_g[im])
         st = st + array_value_to_str(y_median_g[im])
         if (im != global_drawn_x_variables_number-1):
             st = st + " & "
@@ -523,8 +566,7 @@ def draw_tab_item(cname, short_name, y_median_g):
         #else: # affichage du total et fin de ligne
     
     sum_str = array_value_to_str(ssum)
-    # st = st + " & " + sum_str + " & " + short_name + " \\\\"
-    st = st + " & " + sum_str + " \\\\"
+    st = st + " & " + sum_str + " \\\\" # + " & " + short_name
     return st
 
 def draw_tab_item_vert(y_median_a, y_median_b, index):
@@ -541,72 +583,64 @@ def draw_tab_item_vert3(y_median_a, y_median_b, y_median_c, index):
 # TODO : stocker dans des listes distinctes les cas USM copie explicite et USM accès direct
 #        pour pouvoir les réutiliser ensuite dans le graphique.
 
+
+
 # Affichage dans le terminal du tableau à mettre dans le LaTeX
 def draw_tab():
 
     print("\\def\\barr{\\begin{tabular}{c}}")
     print("\\def\\earr{\\end{tabular}}")
     print("")
-
     print("\\begin{center}")
     if tableau_horizontal:
         print("\\resizebox{\\linewidth}{!}{%")
         print("\\begin{tabular}{||l c c c c c c c c c||} ")
         print("\\hline")
+        print("\\barr \\textbf{" + computer_name + "} \\earr")
+        print("& \\barr alloc \\\\ native \\earr")
+        print("& \\barr alloc   \\\\ sycl \\earr")
+        print("& \\barr fill \\earr")
+        print("& \\barr copy \\earr")
+        print("& \\barr ker\\textsubscript{1} \\earr")
+        print("& \\barr ker\\textsubscript{2} \\earr")
+        print("& \\barr dealloc \\\\ sycl \\earr")
+        print("& \\barr dealloc \\\\ native \\earr")
+        print("& \\barr total \\earr")
+        print("\\\\ [0.5ex]")
+
         # tableau flat seulement
         if (FLAT_ONLY):
-            print("\\barr \\textbf{" + computer_name + "} \\earr")
-            print("& \\barr alloc \\\\ native \\earr")
-            print("& \\barr alloc   \\\\ sycl \\earr")
-            print("& \\barr fill \\earr")
-            print("& \\barr copy \\earr")
-            print("& \\barr ker\\textsubscript{1} \\earr")
-            print("& \\barr ker\\textsubscript{2} \\earr")
-            print("& \\barr dealloc \\\\ sycl \\earr")
-            print("& \\barr dealloc \\\\ native \\earr")
-            print("& \\barr total \\earr")
-            print("\\\\ [0.5ex]")
-
-            #print("& native-a & sycl-a & fill & copy & ker\\textsubscript{1} & ker\\textsubscript{2} & sycl-d & native-d & total & \\\\ [0.5ex]")
+        
             print("\\hline\\hline")
             print(draw_tab_item("USM device", "dev", y_median_device))
             print("\\hline")
             print(draw_tab_item("accessors", "acc", y_median_acc))
             print("\\hline")
-            print(draw_tab_item("USM shared", "sha", y_median_shared_direct))
+            print(draw_tab_item("USM shared", "sha", y_median_shared_flat))
             print("\\hline")
-            print(draw_tab_item("USM host", "hos", y_median_host_direct))
-
-            # print("\\hline")
-            # print(draw_tab_item("shared\\_c", "s_c", y_median_shared_copy))
-            # print("\\hline")
-            # print(draw_tab_item("shared\\_d", "s_d", y_median_shared_direct))
-            # print("\\hline")
-            # print(draw_tab_item("host\\_c", "h_c", y_median_host_copy))
-            # print("\\hline")
-            # print(draw_tab_item("host\\_d", "h_d", y_median_host_direct))
+            print(draw_tab_item("USM host", "hos", y_median_host_flat))
         else: # tableau flat vs graphe ptr
-            print("& alloc & fill & kernel & dealloc & total & \\\\ [0.5ex]")
+
             print("\\hline\\hline")
             # Bien penser à vérifier que les valeurs sont les mêmes partout dans la publi
-            print(draw_tab_item("shared flat", y_median_shared_flat))
+            print(draw_tab_item("USM shared flat", "s\\_f", y_median_shared_flat))
             print("\\hline")
-            print(draw_tab_item("shared ptr", y_median_shared_ptr))
+            print(draw_tab_item("USM shared ptr", "s\\_p", y_median_shared_ptr))
             print("\\hline")
-            print("TODO : mettre host flat ici")
-            print("\\hline")
+            # print("TODO : mettre host flat ici")
+            # print("\\hline")
             # Host flat à remplacer par la valeur déjà dans le papier
-            #print(draw_tab_item("host flat", y_median_host_flat))
-            #print("\\hline")
-            print(draw_tab_item("host ptr", y_median_host_ptr))
+            print(draw_tab_item("USM host flat", "h\\_f", y_median_host_flat))
             print("\\hline")
-            print(draw_tab_item("cpu flat", y_median_glibc_flat))
+            print(draw_tab_item("USM host ptr", "h\\_p", y_median_host_ptr))
             print("\\hline")
-            print(draw_tab_item("cpu ptr", y_median_glibc_ptr))
+            print(draw_tab_item("cpu flat", "c\\_f", y_median_glibc_flat))
+            print("\\hline")
+            print(draw_tab_item("cpu ptr", "c\\_p", y_median_glibc_ptr))
 
-            # nothing yet
     #else:
         # Tableau vertical pas encore géré
+
     print("\\hline")
     print("\\end{tabular}}")
     print("\\end{center}")
@@ -641,7 +675,7 @@ draw_tab()
 plt.ylabel('Elapsed time (ms)')
 #plt.ylim([-5, 100])
 plt.legend()
-# global_drawn_x_variables_number+1
+#plt.xticks(range(1, global_drawn_x_variables_number+1), x_list_device) # = x_list_shared et x_list_acc
 plt.xticks(range(1, 6), x_list_curve_drawn) # = x_list_shared et x_list_acc
 
 plt.savefig(output_image_name, format='png') #, dpi=my_dpi)
