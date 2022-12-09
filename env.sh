@@ -18,8 +18,8 @@ export PATH="${SCRIPT_DIR}/bin:${PATH}"
 
 # aliases
 
-alias devices=devices.exe
-alias ubench=ubench.exe
+alias lsd=list_devices.exe
+alias ubench=micro_bench.exe
 alias sparse=sparse_ccl.exe
 
 alias cleant="rm -f ${SCRIPT_DIR}/output/*.t"

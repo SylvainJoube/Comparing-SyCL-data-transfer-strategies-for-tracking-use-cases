@@ -25,9 +25,9 @@ export SBENCH_SYCL_COMPILER_CMD=syclcc
 
 5. Tourner les programmes SYCL de votre choix :
 
-- `devices` ou `devices.exe` : liste les devices.
-- `ubench <score>` ou `ubench.exe <score> <load-count-value>` : exécute sur le device de score `<score>` le banc d'essai ubench. Si on veut changer la taille memoire pour ubench_2_2 (code jouet non sparse) : fichier ubench_v2_fcts.h, ligne 48. Tout est rejoué 12 fois (pour l'instant fixé en dur) (REPEAT_COUNT_REALLOC).
-- `sparse <score> <load-count-value>` ou `sparse_ccl.exe <device> <load-count-value>` : exécute sur le device de score `<score>` le banc d'essai sparsecll, en duplicant les données `<load-count-value>` fois. USM host prend énormément de temps. Dans l'idéal, sur une grosse machine (comme cassidi ou sandor), un  `<load-count-value>` de `100` est recommandée (mais ça prend facilement une heure à tourner, si ce n'est plus) donc une valeur de `10` pour commencer c'est déjà très bien. Tout est rejoué 12 fois (pour l'instant fixé en dur) (REPEAT_COUNT_REALLOC). Les % à l'affichage : 50% = erreur d'approximation d'un facteur 2. Il manque un retour chariot.
+- `lsd` ou `list_devices.exe` : liste les devices.
+- `ubench <score>` ou `micro_bench.exe <score> <load-count-value>` : exécute sur le device de score `<score>` le banc d'essai ubench. Si on veut changer la taille memoire pour ubench_2_2 (code jouet non sparse) : fichier ubench_v2_fcts.h, ligne 48. Tout est rejoué 12 fois (pour l'instant fixé en dur) (REPEAT_COUNT_REALLOC).
+- `sparse <score> <load-count-value>` ou `sparse_ccl.exe <device> <load-count-value>` : exécute sur le device de score `<score>` le banc d'essai sparsecll, en duplicant les données `<load-count-value>` fois. USM host prend énormément de temps. Dans l'idéal, sur une grosse machine (comme cassidi ou sandor), un  `<load-count-value>` de `100` est recommandée (mais ça prend facilement une heure à tourner, si ce n'est plus) donc une valeur de `10` pour commencer c'est déjà très bien. Tout est rejoué 12 fois (pour l'instant fixé en dur) (REPEAT_COUNT_REALLOC). Les % à l'affichage : 50% = erreur d'approximation d'un facteur 2.
 
 **Quand le fichier de sortie existe déjà, le programme ne le refait pas**.
 
