@@ -2062,9 +2062,6 @@ namespace traccc {
 
     void bench_mem_location_and_strategy(std::ofstream& myfile) {
 
-        //log("============    - L = VECTOR_SIZE_PER_ITERATION = " + std::to_string(VECTOR_SIZE_PER_ITERATION));
-        //log("============    - M = PARALLEL_FOR_SIZE = " + std::to_string(PARALLEL_FOR_SIZE));
-        
         int nb_seq = 0 ;
         if (!ignore_flatten_benchmark)
          { nb_seq += 5 ; }

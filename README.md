@@ -36,7 +36,12 @@ export SBENCH_SYCL_COMPILER_CMD=syclcc
   - `sparseccl108_generalGraphPtr_uniqueModules_[nom ordi]_ld[valeur de ld]_RUN1_[nom du device].t`
   - `ubench2_2_[nom ordi]_4GiB_RUN1_[nom du device].t`
 
-# Notes
+# A faire
+
+- ne pas laisser trainer de fichier de sortie incomplet si l'execution a echoué avant la fin.
+
+
+# Notes diverses
 
 To run with syclcc, set those variables :
 export HIPSYCL_TARGETS="cuda:sm_35" && \

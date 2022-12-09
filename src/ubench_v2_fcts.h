@@ -471,7 +471,7 @@ namespace ubench_v2 {
 
             int fdiv = 1000; // ms
             logs(
-                "\n       t_alloc_native(" + std::to_string(cres.t_alloc_native / fdiv) + ") "
+                "t_alloc_native(" + std::to_string(cres.t_alloc_native / fdiv) + ") "
                 + "t_alloc_sycl(" + std::to_string(cres.t_alloc_sycl / fdiv) + ") "
                 + "t_fill(" + std::to_string(cres.t_fill / fdiv) + ") "
                 + "t_copy(" + std::to_string(cres.t_copy / fdiv) + ") "

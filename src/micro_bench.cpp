@@ -18,7 +18,6 @@
 #include "utils.h"
 #include "progress.h"
 #include "constants.h"
-#include "traccc_fcts.h"
 #include "bench_mems.hh"
 #include "ubench_v2_fcts.h"
 
