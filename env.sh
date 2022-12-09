@@ -10,7 +10,7 @@ SCRIPT_DIR=`pwd`
 
 # Préparation des répertoires annexes
 
-mkdir -p output
+mkdir -p build output
 
 # extend PATH and LD_LIBRARY_PATH
 
@@ -22,7 +22,7 @@ alias lsd=list_devices.exe
 alias ubench=micro_bench.exe
 alias sparse=sparse_ccl.exe
 
-alias cleant="rm -f ${SCRIPT_DIR}/output/*.t"
+alias rmt="rm -f ${SCRIPT_DIR}/output/*.t"
 alias harvest-sparseccl=2022-09-29_sparseccl_grouped.py
 alias harvest-ubench=2022-09-29_ubench_v2_grouped.py
 

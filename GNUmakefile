@@ -4,14 +4,16 @@
 #   dpcpp
 #   syclcc
 
-# Executables
-HDRS = $(wildcard *.h)
-SRCS = $(wildcard *.cpp)
-EXES = $(patsubst %.cpp,bin/%.exe,$(SRCS))
+# Listes
+HDRS = $(wildcard src/*.h)
+SRCS = $(wildcard src/*.cc)
+OBJS = $(patsubst src/%.cc,build/%.o,$(SRCS))
+PRGS = $(wildcard src/*.cpp)
+EXES = $(patsubst src/%.cpp,bin/%.exe,$(PRGS))
 
 # Options
 CXX = $(SBENCH_SYCL_COMPILER_CMD)
-CXXFLAGS = -O2 -std=c++17 -Wall # Or -O0 -g instead of -O2
+CXXFLAGS = -I./src -O2 -std=c++17 -Wall # Or -O0 -g instead of -O2
 
 all: build
 
@@ -24,9 +26,13 @@ build: check-env $(EXES)
 clean: 
 	-rm -f $(EXES)
 	-rm -f bin/*.exe
+	-rm -f build/*.o
 
 verbose:
+	@echo HDRS: $(HDRS)
 	@echo SRCS: $(SRCS)
+	@echo OBJS: $(OBJS)
+	@echo PRGS: $(PRGS)
 	@echo EXES: $(EXES)
 
 
@@ -34,6 +40,10 @@ verbose:
 ## Implicit rules
 #############################################################################
 
-bin/%.exe: %.cpp $(HDRS)
+build/%.o: src/%.cc $(HDRS)
+	@rm -f $@
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+bin/%.exe: src/%.cpp $(HDRS) $(OBJS)
 	@rm -f $@
 	$(CXX) $(CXXFLAGS) -o $@ $<

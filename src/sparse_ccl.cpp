@@ -18,7 +18,7 @@
 #include "utils.h"
 #include "constants.h"
 #include "traccc_fcts.h"
-#include "bench_mems.hpp"
+#include "bench_mems.hh"
 #include "ubench_v2_fcts.h"
 
 int main(int argc, char *argv[])
@@ -27,13 +27,14 @@ int main(int argc, char *argv[])
     init_computers();
     log("");
     log("========~~~~~~~ VERSION " + DISPLAY_VERSION + " ~~~~~~~========");
-
-    assert(argc==2) ;
-
+    assert(argc==3) ;
     int device = atoi(argv[1]);
     selector_list_devices_generic dev_list_select2{device};
     cl::sycl::queue temp_queue2(dev_list_select2, exception_handler);
+    runtime_environment.repeat_load_count = atoi(argv[2]);
+    base_traccc_repeat_load_count = runtime_environment.repeat_load_count;
     log("device: " + std::to_string(device));
+    log("repeat_load_count: " + std::to_string(runtime_environment.repeat_load_count));
 
     log("");
     log("=== Currently running on computer: " + runtime_environment.computer_name + " ===");
@@ -50,14 +51,9 @@ int main(int argc, char *argv[])
 
     REPEAT_COUNT_REALLOC = 12; // nombre de fois que le test doit être lancé (défini dans le main)
 
-    REPEAT_COUNT_ONLY_PARALLEL = 0;//12;
+    REPEAT_COUNT_ONLY_PARALLEL = 0;//12;    
 
-    //total_elements = 1024L * 1024L * 256L;   // 256 milions elements * 4 bytes => 1 GiB
-    //std::string size_str = "1GiB";
-    //total_elements = 1024L * 1024L * 128L; // 128 milions elements * 4 bytes => 512 MiB
-    //std::string size_str = "512MiB";
-    
-    ubench_v2::run_ubench2_tests(runtime_environment.computer_name, runtime_environment.runs_count);
+    traccc::run_all_traccc_acat_benchs_generic();
 
     return 0;
 }
