@@ -1,15 +1,19 @@
 #include "progress.h"
 #include "utils.h"
 
-int total_main_seq_runs = 1;
-int current_iteration_count = 0;
+static int total_main_seq_runs = 1;
+static int current_iteration_count = 0;
 
-void init_progress() {
-    total_main_seq_runs = 1;
-    current_iteration_count = 0;
+void progress_init( int _total_main_seq_runs_ ) {
+    total_main_seq_runs = _total_main_seq_runs_ ;
+    current_iteration_count = 0 ;
 }
 
-void print_total_progress() {
+void progress_increment() {
+    ++current_iteration_count ;
+}
+
+void progress_print() {
     const int total_iteration_count_per_seq = DATASET_NUMBER * (REPEAT_COUNT_REALLOC + REPEAT_COUNT_ONLY_PARALLEL
     + ( (REPEAT_COUNT_ONLY_PARALLEL == 0) ? 0 : REPEAT_COUNT_ONLY_PARALLEL_WARMUP_COUNT) );
 

@@ -42,28 +42,23 @@ namespace ubench_v2 {
     */
 
     const unsigned int microseconds = 0;
-
-    // TODO : voir si je peux faire en sorte que b_INPUT_DATA_LENGTH soit renseigné et connu au runtime
-    // Nombre de data_type
-    const unsigned long b_INPUT_DATA_LENGTH   = 4L * 1024L * 1024L * 1024L / sizeof(data_type); // cassidi, sandor : 6L
-  //const unsigned long b_INPUT_DATA_LENGTH   = 6L * 1024L * 1024L * 1024L / sizeof(data_type);
-    const unsigned long b_INPUT_OUTPUT_FACTOR = 128; // taille des sommes partielles
-    const unsigned long b_OUTPUT_DATA_LENGTH  = b_INPUT_DATA_LENGTH / b_INPUT_OUTPUT_FACTOR;
-
-    // Taille en octets calculées
-    // unsigned long b_INPUT_DATA_SIZE;
-    // unsigned long b_OUTPUT_DATA_SIZE;
-
-    //data_type s;
-
+    
     const uint TRACCC_LOG_LEVEL = 0; // Seulement afficher les infos du log 0
 
-    //bool ignore_allocation_times;// = false;
-    // bool ignore_pointer_graph_benchmark;
-    // bool ignore_flatten_benchmark;
+    unsigned long b_INPUT_DATA_LENGTH {} ;
+    unsigned long b_INPUT_OUTPUT_FACTOR {} ;
+    unsigned long b_OUTPUT_DATA_LENGTH {} ;
+    unsigned long in_total_size {} ;
+    unsigned long out_total_size {} ;
 
-    const unsigned long in_total_size  = b_INPUT_DATA_LENGTH  * sizeof(data_type);
-    const unsigned long out_total_size = b_OUTPUT_DATA_LENGTH * sizeof(data_type);
+    void init_data_length( unsigned long gb )
+     {
+      b_INPUT_DATA_LENGTH   = gb * 1024L * 1024L * 1024L / sizeof(data_type); // cassidi, sandor : 6L
+      b_INPUT_OUTPUT_FACTOR = 128; // taille des sommes partielles
+      b_OUTPUT_DATA_LENGTH  = b_INPUT_DATA_LENGTH / b_INPUT_OUTPUT_FACTOR;
+      in_total_size  = b_INPUT_DATA_LENGTH  * sizeof(data_type);
+      out_total_size = b_OUTPUT_DATA_LENGTH * sizeof(data_type);
+     }
 
     enum mem_strategy { pointer_graph, flatten };
 
@@ -471,8 +466,8 @@ namespace ubench_v2 {
             }
             write_file << "\n";
 
-            ++current_iteration_count;
-            print_total_progress();
+            progress_increment() ;
+            progress_print();
 
             int fdiv = 1000; // ms
             logs(
@@ -511,7 +506,7 @@ namespace ubench_v2 {
 
     // }
 
-    int main_of_bench_v2(std::string fname) { //std::function<void(std::ofstream &)> bench_function) {
+    int main_of_bench_v2(std::string fname ) { //std::function<void(std::ofstream &)> bench_function) {
         std::ofstream myfile;
         std::string wdir_tmp = std::filesystem::current_path();
         std::string wdir = wdir_tmp + "/output/" ;
@@ -562,11 +557,9 @@ namespace ubench_v2 {
         //REPEAT_COUNT_ONLY_PARALLEL_WARMUP_COUNT = 0;
 
 
-        init_progress();
+        progress_init(7);
 
         compute_expected_sum();
-
-        total_main_seq_runs = 7;
 
         // (USM) explicit copy
         traccc_main_sequence(myfile, sycl_mode::device_USM, true);
@@ -597,7 +590,7 @@ namespace ubench_v2 {
         }
     }
 
-    void run_ubench2_single_test(std::string const computer_name, uint run_id) {
+    void run_ubench2_single_test(std::string const computer_name, uint run_id ) {
         std::string OUTPUT_FILE_NAME ;
         OUTPUT_FILE_NAME =  UBENCH2_VERSION_FILE_PREFIX + "_" + computer_name
                             + "_" + input_size_to_str() + "_RUN"
@@ -608,9 +601,7 @@ namespace ubench_v2 {
         main_of_bench_v2(OUTPUT_FILE_NAME);
     }
 
-    void run_ubench2_tests(std::string const computer_name, uint run_number) {
-        log("run_ubench2_tests RUN");
-        log("run_ubench2_tests RUN");
+    void run_ubench2_tests(std::string const computer_name, uint run_number ) {
         log("run_ubench2_tests RUN");
         for (uint i = 1; i <= run_number; ++i) {
             run_ubench2_single_test(computer_name, i);

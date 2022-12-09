@@ -1,7 +1,5 @@
 #pragma once
 
-extern int total_main_seq_runs ;
-extern int current_iteration_count ;
-
-void init_progress() ;
-void print_total_progress()  ;
+void progress_init( int total_main_seq_runs = 1 ) ;
+void progress_increment() ;
+void progress_print()  ;
