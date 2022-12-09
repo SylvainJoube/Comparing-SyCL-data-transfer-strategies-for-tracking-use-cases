@@ -82,21 +82,6 @@ std::string MUST_RUN_ON_DEVICE_NAME = "<unknown device>"; //"Intel(R) UHD Graphi
 // (to test caches and data access speed)
 uint REPEAT_COUNT_SUM = 1;
 
-//#define OUTPUT_FILE_NAME "sh_output_bench_h53.shared_txt"
-//#define OUTPUT_FILE_NAME "msi_h60_L_M_128MiB_O0.t"
-
-//#define OUTPUT_FILE_NAME "msi_L_M_512MiB_O2_SIMD_2.t"
-//#define OUTPUT_FILE_NAME "sandor_L_M_6GiB_O2_SIMD_2.t"
-//#define OUTPUT_FILE_NAME "msi_L_M_128MiB_O2_SIMD.t"
-//#define OUTPUT_FILE_NAME "sandor_L_M_6GiB_O2.t"
-
-//#define OUTPUT_FILE_NAME "msi_simd_1GiB_O2.t"
-//#define OUTPUT_FILE_NAME "msi_simd_1GiB_O2_debug.temp"
-//#define OUTPUT_FILE_NAME "sandor_simd_6GiB_O2.t"
-//#define OUTPUT_FILE_NAME "sandor_simd_6GiB_O2_debug_simd_temp.t"
-//#define OUTPUT_FILE_NAME "sandor_simd_8GiB_O2_debug_simd_temp.t"
-
-
 std::string BENCHMARK_VERSION = "ubench" + std::to_string(DATA_VERSION); // Sandor compatible  v05
 std::string BENCHMARK_VERSION_TRACCC = "sparseccl" + std::to_string(DATA_VERSION_TRACCC);
 std::string DISPLAY_VERSION = BENCHMARK_VERSION_TRACCC + " - TRACCC-016";
@@ -140,21 +125,6 @@ public:
 
 s_runtime_environment runtime_environment;
 
-// OUTPUT_FILE_NAME is now obsolete
-std::string OUTPUT_FILE_NAME = "thinkpad_dma_1GiB_O2.t";
-//#define OUTPUT_FILE_NAME "msi_dma_1GiB_O2.t"
-//#define OUTPUT_FILE_NAME "sandor_dma_1GiB_O2.t"
-//#define OUTPUT_FILE_NAME "msi_dma_512MiB_O2.t"
-
-//#define OUTPUT_FILE_NAME "msi_alloc_1GiB_O2.t"
-//#define OUTPUT_FILE_NAME "sandor_alloc_6GiB_O2.t"
-
-//#define OUTPUT_FILE_NAME "sandor_h60_L_M_4GiB_O2.t"
-//#define OUTPUT_FILE_NAME "msi_h60_alloclib_1GiB_O2.t"
-//#define OUTPUT_FILE_NAME "msi_h60_simd_1GiB_O2_20pts.t"
-//#define OUTPUT_FILE_NAME "T580_h60_L_M_128MiB.t"
-//#define OUTPUT_FILE_NAME "T580_h60_simd_128MiB.t"
-
 //const long long total_elements = 1024L * 1024L * 256L * 8L; // 8 GiB
 //const long long total_elements = 1024L * 1024L * 256L * 6L; // 6 GiB
 long long total_elements = 1024L * 1024L * 256L; // 1 GiB
@@ -171,8 +141,6 @@ std::string g_size_str = "0MiB";
 
 std::string ver_indicator = std::string("13d");
 
-// ver_prefix is now obsolete
-std::string ver_prefix = OUTPUT_FILE_NAME + std::string(" - " + ver_indicator); // "X42"
 
 
 

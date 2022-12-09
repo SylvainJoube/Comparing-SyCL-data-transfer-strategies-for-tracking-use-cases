@@ -432,7 +432,7 @@ public:
         
         // List device names and return the default score for the device
         std::string devName =  device.get_info<cl::sycl::info::device::name>();
-        if (print_devices) logs("    " + devName);
+        if (print_devices) logs(devName);
 
         std::string devType = "";
         switch (device.get_info<cl::sycl::info::device::device_type>()) {

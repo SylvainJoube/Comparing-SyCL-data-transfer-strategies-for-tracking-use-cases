@@ -514,7 +514,7 @@ namespace ubench_v2 {
     int main_of_bench_v2(std::string fname) { //std::function<void(std::ofstream &)> bench_function) {
         std::ofstream myfile;
         std::string wdir_tmp = std::filesystem::current_path();
-        std::string wdir = wdir_tmp + "/"; // "/output_bench" removed on 2022-11-30
+        std::string wdir = wdir_tmp + "/"; // "/output" removed on 2022-11-30
         std::string output_file_path = wdir + std::string(fname);
 
         if ( file_exists_test0(output_file_path) ) {
@@ -547,7 +547,7 @@ namespace ubench_v2 {
         log("  SYCL BENCH V2 benchmark.  ");
         log("============================");
         
-        std::cout << OUTPUT_FILE_NAME << std::endl;
+        std::cout << fname << std::endl;
         log("");
         log("-------------- " + ver_indicator + " --------------");
         log("");
@@ -598,6 +598,7 @@ namespace ubench_v2 {
     }
 
     void run_ubench2_single_test(std::string const computer_name, uint run_id) {
+        std::string OUTPUT_FILE_NAME ;
         OUTPUT_FILE_NAME =  UBENCH2_VERSION_FILE_PREFIX + "_" + computer_name
                             + "_" + input_size_to_str() + "_RUN"
                             + std::to_string(run_id) 

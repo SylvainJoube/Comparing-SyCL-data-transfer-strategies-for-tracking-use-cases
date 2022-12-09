@@ -2151,10 +2151,10 @@ namespace traccc {
         }
     }
 
-    int main_of_traccc(std::function<void(std::ofstream &)> bench_function) {
+    int main_of_traccc( const std::string & OUTPUT_FILE_NAME, std::function<void(std::ofstream &)> bench_function) {
         std::ofstream myfile;
         std::string wdir_tmp = std::filesystem::current_path();
-        //std::string wdir = wdir_tmp + "/output_bench/";
+        //std::string wdir = wdir_tmp + "/output/";
         std::string wdir = wdir_tmp + "/"; // modif 2022-11-30
         std::string output_file_path = wdir + std::string(OUTPUT_FILE_NAME);
 
@@ -2222,6 +2222,8 @@ namespace traccc {
 
         bool do_sparse_bench = false;
 
+        std::string OUTPUT_FILE_NAME ;
+
         switch (test_id) {
         //reset_bench_variables();
 
@@ -2231,11 +2233,11 @@ namespace traccc {
 
         // case 1 et 2 utiles pour le papier et la version David
         case 1:
-            OUTPUT_FILE_NAME = BENCHMARK_VERSION_TRACCC + "_generalFlatten" + file_name_const_part; // TRACCC_OUT_FNAME
+            OUTPUT_FILE_NAME = BENCHMARK_VERSION_TRACCC + "_generalFlatten" + file_name_const_part ; // TRACCC_OUT_FNAME
             ignore_pointer_graph_benchmark = true;
             ignore_flatten_benchmark = false;
             // inutile ici implicit_use_unique_module = false;
-            main_of_traccc(bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
             break;
 
         // case 1 et 2 utiles pour le papier et la version David
@@ -2244,7 +2246,7 @@ namespace traccc {
             ignore_pointer_graph_benchmark = false;
             ignore_flatten_benchmark = true;
             implicit_use_unique_module = true;
-            main_of_traccc(bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
             break;
 
         case 3: // inutile pour le papier
@@ -2252,7 +2254,7 @@ namespace traccc {
             ignore_pointer_graph_benchmark = false;
             ignore_flatten_benchmark = true;
             implicit_use_unique_module = false;
-            main_of_traccc(bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
             break;
 
         case 4: // inutile pour le papier
@@ -2260,7 +2262,7 @@ namespace traccc {
             ignore_pointer_graph_benchmark = false;
             ignore_flatten_benchmark = true;
             // inutile ici implicit_use_unique_module = false;
-            main_of_traccc(bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
             break;
 
 
@@ -2287,7 +2289,7 @@ namespace traccc {
             ignore_pointer_graph_benchmark = true;
             ignore_flatten_benchmark = false;
             // inutile ici implicit_use_unique_module = false;
-            main_of_traccc(bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
         }
     }
 
