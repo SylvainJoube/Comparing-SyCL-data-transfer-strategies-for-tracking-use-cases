@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <filesystem>
 #include <fstream>
@@ -14,12 +15,7 @@
 #include <sys/time.h>
 #include <stdlib.h>
 
-
 #include "utils.h"
-//#include "constants.h"
-//#include "traccc_fcts.h"
-//#include "bench_mems.hh"
-//#include "ubench_v2_fcts.h"
 
 int main(int argc, char *argv[])
  {
@@ -30,4 +26,3 @@ int main(int argc, char *argv[])
   std::cout<<std::endl ;
   return 0 ;
  }
-

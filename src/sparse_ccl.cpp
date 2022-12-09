@@ -14,8 +14,8 @@
 #include <sys/time.h>
 #include <stdlib.h>
 
-
 #include "utils.h"
+#include "progress.h"
 #include "constants.h"
 #include "traccc_fcts.h"
 #include "bench_mems.hh"

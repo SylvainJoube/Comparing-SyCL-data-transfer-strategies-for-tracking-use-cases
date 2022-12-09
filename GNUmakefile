@@ -7,13 +7,13 @@
 # Listes
 HDRS = $(wildcard src/*.h)
 SRCS = $(wildcard src/*.cc)
-OBJS = $(patsubst src/%.cc,build/%.o,$(SRCS))
 PRGS = $(wildcard src/*.cpp)
+OBJS = $(patsubst src/%.cc,build/%.o,$(SRCS))
 EXES = $(patsubst src/%.cpp,bin/%.exe,$(PRGS))
 
 # Options
 CXX = $(SBENCH_SYCL_COMPILER_CMD)
-CXXFLAGS = -I./src -O2 -std=c++17 -Wall # Or -O0 -g instead of -O2
+CXXFLAGS = -I./src -O2 -std=c++17 -Wall# Or -O0 -g instead of -O2
 
 all: build
 
@@ -40,10 +40,16 @@ verbose:
 ## Implicit rules
 #############################################################################
 
+.PRECIOUS: build/%.o
+
 build/%.o: src/%.cc $(HDRS)
 	@rm -f $@
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-bin/%.exe: src/%.cpp $(HDRS) $(OBJS)
+build/%.o: src/%.cpp $(HDRS)
 	@rm -f $@
-	$(CXX) $(CXXFLAGS) -o $@ $<
+	$(CXX) $(CXXFLAGS) -o $@ -c $<
+
+bin/%.exe: build/%.o $(OBJS)
+	@rm -f $@
+	$(CXX) $(CXXFLAGS) -o $@ $^
