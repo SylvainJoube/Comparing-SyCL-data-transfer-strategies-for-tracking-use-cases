@@ -16,6 +16,7 @@
 #include <stdlib.h>
 
 #include "utils.h"
+#include "progress.h"
 #include "constants.h"
 
 // Regroupe des fonctions & structures utiles

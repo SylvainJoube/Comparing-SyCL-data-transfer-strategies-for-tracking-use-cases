@@ -1,4 +1,5 @@
 #pragma once
+
 #include <iostream>
 #include <filesystem>
 #include <fstream>
@@ -17,6 +18,7 @@
 #include <stdlib.h>
 
 #include "utils.h"
+#include "progress.h"
 #include "constants.h"
 
 // Regroupe des fonctions & structures utiles
@@ -175,6 +177,10 @@ namespace ubench_v2 {
             memset(b.native_input,  1, b_INPUT_DATA_LENGTH  * sizeof(data_type));
             memset(b.native_output, 1, b_OUTPUT_DATA_LENGTH * sizeof(data_type));
             b.c.t_alloc_native = chrono.reset();
+            if (!b.native_input)
+             { throw cl::sycl::exception(cl::sycl::errc::memory_allocation,"native input new failure") ; } 
+            if (!b.native_output)
+             { throw cl::sycl::exception(cl::sycl::errc::memory_allocation,"native output new failure") ; } 
         }
 
         switch(b.mode) {
@@ -211,6 +217,13 @@ namespace ubench_v2 {
         case glibc: // alloc native déjà réalisée
             break;
         }
+        if (is_using_usm(b)) {
+          if (!b.sycl_input)
+           { throw cl::sycl::exception(cl::sycl::errc::memory_allocation,"sycl input malloc failure") ; } 
+          if (!b.sycl_output)
+           { throw cl::sycl::exception(cl::sycl::errc::memory_allocation,"sycl output malloc failure") ; }
+        }
+
     }
 
     void dealloc(bench_variables & b) {
@@ -429,7 +442,7 @@ data_type g_expected_sum;
             return bench.c; // résultats chronométrés            
             
         } catch (cl::sycl::exception const &e) {
-            std::cout << "An exception has been caught while processing SyCL code.\n";
+            std::cout << "An exception has been caught while processing SyCL code: "<<e.what()<<"\n";
             std::terminate();
         }
     }
@@ -445,7 +458,6 @@ data_type g_expected_sum;
         << mode_to_int(mode) << " " // ------ utile
         << (explicit_copy ? "1" : "0") << " " // 1 copie explicite ; 0 copie automatique
         << "\n";
-
         // Allocation and free on device, for each iteration
         for (int rpt = 0; rpt < REPEAT_COUNT_REALLOC; ++rpt) {
             log("Iteration " + std::to_string(rpt+1) + " on " + std::to_string(REPEAT_COUNT_REALLOC), 2);

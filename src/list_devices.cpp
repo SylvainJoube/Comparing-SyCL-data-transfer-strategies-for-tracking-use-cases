@@ -16,6 +16,8 @@
 #include <stdlib.h>
 
 #include "utils.h"
+#include "constants.h"
+#include "traccc_fcts.h"
 
 int main(int argc, char *argv[])
  {

@@ -19,6 +19,7 @@
 #include <stdlib.h>
 
 #include "utils.h"
+#include "progress.h"
 #include "constants.h"
 #include "traccc_fcts.h"
 #include "sycl_helloworld.h"

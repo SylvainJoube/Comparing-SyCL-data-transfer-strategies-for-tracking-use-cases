@@ -90,7 +90,7 @@ void logs(std::string str) ;
 // - 1 : info
 // - 2 : flood
 
-constexpr int MAX_SHOWN_LEVEL = 1 ;
+constexpr int MAX_SHOWN_LEVEL = 2 ;
 
 void log(std::string str, int level) ;
 
@@ -303,8 +303,6 @@ public:
         return defaultScore;
     }
 };
-
-void select_device_generic(std::function<void(cl::sycl::exception_list)> func) ;
 
 /*
 Taken from : https://github.com/codeplaysoftware/computecpp-sdk/blob/master/samples/custom-device-selector.cpp#L46

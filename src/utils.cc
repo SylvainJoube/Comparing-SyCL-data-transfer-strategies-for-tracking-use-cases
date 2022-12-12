@@ -212,41 +212,6 @@ void delete_datasets(host_dataset* hdata, uint a_DATASET_NUMBER) {
     delete[] hdata;
 }
 
-
-void select_device_generic(std::function<void(cl::sycl::exception_list)> func) {
-    log("Computer name: " + sys_get_hostname());
-    log("== List of available devices ==");
-    selector_list_devices_generic dev_list_select{};
-    cl::sycl::queue temp_queue(dev_list_select, func);
-    
-    log("\nPlease provide the score of the device you wish to use:");
-    std::string input;
-    std::cin >> input;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-    if (! is_number(input) ) {
-        log("ERROR: '" + input + "' is not a number.");
-        log("        Program stops here.");
-        log("        Please provide a score matching a device.");
-        exit(0);
-    }
-
-    int value = stoi(input);
-    log("Provided: '" + std::to_string(value) + "'");
-
-    selector_list_devices_generic dev_list_select2{value};
-    cl::sycl::queue temp_queue2(dev_list_select2, func);
-
-    if ( ERR_DEVICE_NOT_FOUND ) {
-        log("ERROR : unable to find the desired device.");
-        log("        Program stops here.");
-        log("        Please provide a score matching a device.");
-        exit(0);
-    }
-
-    press_enter_to_continue();
-
-}
-
 /*
 Taken from : https://github.com/codeplaysoftware/computecpp-sdk/blob/master/samples/custom-device-selector.cpp#L46
 pointed by the answer https://stackoverflow.com/questions/59061444/how-do-you-make-sycl-default-selector-select-an-intel-gpu-rather-than-an-nvidi
