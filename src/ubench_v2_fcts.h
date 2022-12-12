@@ -161,6 +161,7 @@ namespace ubench_v2 {
 
     // Alloc native + alloc SYCL
     void allocation(bench_variables & b) {
+
         if (be_verbose) log("allocation");
         stime_utils chrono;
         //shared_USM, device_USM, host_USM, accessors, glibc};
@@ -212,7 +213,39 @@ namespace ubench_v2 {
         }
     }
 
-    data_type g_expected_sum;
+    void dealloc(bench_variables & b) {
+
+        if (be_verbose) log("dealloc");
+        stime_utils chrono;
+        chrono.start();
+
+        if (is_using_native_memory(b)) {
+            delete[] b.native_input;
+            delete[] b.native_output;
+            b.c.t_dealloc_native = chrono.reset();
+        }
+
+        if (b.mode == sycl_mode::accessors) {
+            delete b.buffer_input;
+            delete b.buffer_output;
+            b.buffer_input  = nullptr;
+            b.buffer_output = nullptr;
+            b.sycl_q.wait_and_throw();
+            b.c.t_dealloc_sycl = chrono.reset();
+        }
+
+        if (is_using_usm(b)) {
+            cl::sycl::free(b.sycl_input,  b.sycl_q);
+            cl::sycl::free(b.sycl_output, b.sycl_q);
+            b.sycl_input  = nullptr;
+            b.sycl_output = nullptr;
+            b.sycl_q.wait_and_throw();
+            b.c.t_dealloc_sycl = chrono.reset();
+        }
+        if (be_verbose) log("Iteration OK.");
+    }
+
+data_type g_expected_sum;
 
     // Pour la vérification des résultats
     void compute_expected_sum() {
@@ -364,37 +397,6 @@ namespace ubench_v2 {
         return sum;
     }
 
-    void dealloc(bench_variables & b) {
-        if (be_verbose) log("dealloc");
-        stime_utils chrono;
-        chrono.start();
-
-        if (is_using_native_memory(b)) {
-            delete[] b.native_input;
-            delete[] b.native_output;
-            b.c.t_dealloc_native = chrono.reset();
-        }
-
-        if (b.mode == sycl_mode::accessors) {
-            delete b.buffer_input;
-            delete b.buffer_output;
-            b.buffer_input  = nullptr;
-            b.buffer_output = nullptr;
-            b.sycl_q.wait_and_throw();
-            b.c.t_dealloc_sycl = chrono.reset();
-        }
-
-        if (is_using_usm(b)) {
-            cl::sycl::free(b.sycl_input,  b.sycl_q);
-            cl::sycl::free(b.sycl_output, b.sycl_q);
-            b.sycl_input  = nullptr;
-            b.sycl_output = nullptr;
-            b.sycl_q.wait_and_throw();
-            b.c.t_dealloc_sycl = chrono.reset();
-        }
-        if (be_verbose) log("Iteration OK.");
-    }
-
 
     traccc_chrono_results traccc_bench(sycl_mode mode, bool explicit_copy) {
 
@@ -487,24 +489,6 @@ namespace ubench_v2 {
         log("\n");
     }
 
-
-    // void bench_mem_location_and_strategy(std::ofstream& myfile) {
-
-    //     //log("============    - L = VECTOR_SIZE_PER_ITERATION = " + std::to_string(VECTOR_SIZE_PER_ITERATION));
-    //     //log("============    - M = PARALLEL_FOR_SIZE = " + std::to_string(PARALLEL_FOR_SIZE));
-
-    //     // Implicit copy
-    //     traccc_main_sequence(myfile, sycl_mode::shared_USM, false);
-    //     traccc_main_sequence(myfile, sycl_mode::host_USM,   false);
-    //     traccc_main_sequence(myfile, sycl_mode::accessors,  false);
-    //     traccc_main_sequence(myfile, sycl_mode::glibc,      false);
-
-    //     // (USM) explicit copy
-    //     traccc_main_sequence(myfile, sycl_mode::device_USM, true);
-    //     traccc_main_sequence(myfile, sycl_mode::shared_USM, true);
-    //     traccc_main_sequence(myfile, sycl_mode::host_USM,   true);
-
-    // }
 
     int main_of_bench_v2(std::string fname ) { //std::function<void(std::ofstream &)> bench_function) {
         std::ofstream myfile;

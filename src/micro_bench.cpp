@@ -30,15 +30,20 @@ int main(int argc, char *argv[])
     log("========~~~~~~~ VERSION " + DISPLAY_VERSION + " ~~~~~~~========");
 
     assert(argc>1) ;
-    assert(argc<4) ;
-    int device = atoi(argv[1]);
-    unsigned long gb = 1UL ;
+    assert(argc<5) ;
+    int arg_score = atoi(argv[1]);
+    unsigned long arg_gb = 1UL ;
     if (argc>2)
-     { gb = atoi(argv[2]) ; }
+     { arg_gb = atoi(argv[2]) ; }
+    unsigned int arg_repeat = 12 ;
+    if (argc>3)
+     { arg_repeat = atoi(argv[3]) ; }
 
-    selector_list_devices_generic dev_list_select2{device};
+    selector_list_devices_generic dev_list_select2{arg_score};
     cl::sycl::queue temp_queue2(dev_list_select2, exception_handler);
-    log("device: " + std::to_string(device));
+    log("device score: " + std::to_string(arg_score));
+    log("data size: " + std::to_string(arg_gb) + "Gb");
+    log("recompute: " + std::to_string(arg_repeat) + " times");
 
     log("");
     log("=== Currently running on computer: " + runtime_environment.computer_name + " ===");
@@ -53,7 +58,7 @@ int main(int argc, char *argv[])
     // FORCE_EXECUTION_ON_NAMED_DEVICE = true; set as const
     //MUST_RUN_ON_DEVICE_NAME = "Intel(R) UHD Graphics 620 [0x5917]";
 
-    REPEAT_COUNT_REALLOC = 12 ;
+    REPEAT_COUNT_REALLOC = arg_repeat ;
 
     REPEAT_COUNT_ONLY_PARALLEL = 0 ;
 
@@ -62,7 +67,7 @@ int main(int argc, char *argv[])
     //total_elements = 1024L * 1024L * 128L; // 128 milions elements * 4 bytes => 512 MiB
     //std::string size_str = "512MiB";
     
-    ubench_v2::init_data_length(gb) ;
+    ubench_v2::init_data_length(arg_gb) ;
     ubench_v2::run_ubench2_tests(runtime_environment.computer_name, runtime_environment.runs_count);
 
     return 0;

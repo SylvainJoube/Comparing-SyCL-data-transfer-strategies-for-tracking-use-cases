@@ -149,7 +149,7 @@ void init_computers() {
 
 std::string get_computer_name(uint computer_id) {
     if ( (computer_id > g_computer_count) || (computer_id == 0) )
-        return "unknown_computer_id" + std::to_string(computer_id);
+        return "unknown_computer_id " + std::to_string(computer_id);
     
     return g_computers[computer_id - 1].fullName;
     

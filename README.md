@@ -26,8 +26,9 @@ export SBENCH_SYCL_COMPILER_CMD=syclcc
 5. Tourner les programmes SYCL de votre choix :
 
 - `lsd` ou `list_devices.exe` : liste les devices.
-- `ubench <score>` ou `micro_bench.exe <score> <load-count-value>` : exécute sur le device de score `<score>` le banc d'essai ubench. Si on veut changer la taille memoire pour ubench_2_2 (code jouet non sparse) : fichier ubench_v2_fcts.h, ligne 48. Tout est rejoué 12 fois (pour l'instant fixé en dur) (REPEAT_COUNT_REALLOC).
-- `sparse <score> <load-count-value>` ou `sparse_ccl.exe <device> <load-count-value>` : exécute sur le device de score `<score>` le banc d'essai sparsecll, en duplicant les données `<load-count-value>` fois. USM host prend énormément de temps. Dans l'idéal, sur une grosse machine (comme cassidi ou sandor), un  `<load-count-value>` de `100` est recommandée (mais ça prend facilement une heure à tourner, si ce n'est plus) donc une valeur de `10` pour commencer c'est déjà très bien. Tout est rejoué 12 fois (pour l'instant fixé en dur) (REPEAT_COUNT_REALLOC). Les % à l'affichage : 50% = erreur d'approximation d'un facteur 2.
+- `ubench <score> <data-size-gb> <repeat>` ou `micro_bench.exe <score> <data-size-gb> <repeat>` : exécute sur le device de score `<score>` le banc d'essai ubench, pour une taille de `<data-size-gb>` Gb (1 par défaut), et en répétant les mêmes calculs et échanges de données `<repeat>` fois (12 par défaut).
+- `sparse <score> <load-count-value> <repeat>` ou `sparse_ccl.exe <score> <load-count-value> <repeat>` : exécute sur le device de score `<score>` le banc d'essai sparsecll, en duplicant les données `<load-count-value>` fois (1 par défaut), et en répétant les mêmes calculs et échanges de données `<repeat>` fois (12 par défaut).
+
 
 **Quand le fichier de sortie existe déjà, le programme ne le refait pas**.
 
@@ -39,6 +40,35 @@ export SBENCH_SYCL_COMPILER_CMD=syclcc
 # A faire
 
 - ne pas laisser trainer de fichier de sortie incomplet si l'execution a echoué avant la fin.
+
+
+# Pile d'appel micro_bench.cpp
+
+- ubench_v2::init_data_length(gb)
+- ubench_v2::run_ubench2_tests(runtime_environment.computer_name, runtime_environment.runs_count)
+  - run_ubench2_single_test(computer_name, i) * runtime_environment.runs_count // == 1 ?!? 
+    - main_of_bench_v2(OUTPUT_FILE_NAME)
+      - progress_init(7)
+      - // (USM) explicit copy
+      - traccc_main_sequence(myfile, sycl_mode::device_USM, true);
+      - traccc_main_sequence(myfile, sycl_mode::shared_USM, true);
+      - traccc_main_sequence(myfile, sycl_mode::host_USM,   true);
+      - // Implicit copy
+      - traccc_main_sequence(myfile, sycl_mode::shared_USM, false);
+      - traccc_main_sequence(myfile, sycl_mode::host_USM,   false);
+      - traccc_main_sequence(myfile, sycl_mode::accessors,  false);
+      - traccc_main_sequence(myfile, sycl_mode::glibc,      false);
+        * REPEAT_COUNT_REALLOC
+        - traccc_bench(mode, explicit_copy);
+          - allocation(bench);
+          - fill(bench);
+          - copy(bench);
+          - kernel(bench);
+          - data_type sum = read(bench);
+          - dealloc(bench);
+        - progress_increment() ;
+        - progress_print();
+
 
 
 # Notes diverses
