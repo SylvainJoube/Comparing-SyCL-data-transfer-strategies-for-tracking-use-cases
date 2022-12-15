@@ -1,4 +1,5 @@
 #pragma once
+
 #include <iostream>
 #include <filesystem>
 #include <fstream>
@@ -17,6 +18,7 @@
 #include <stdlib.h>
 
 #include "utils.h"
+#include "progress.h"
 #include "constants.h"
 
 // Regroupe des fonctions & structures utiles
@@ -42,28 +44,23 @@ namespace ubench_v2 {
     */
 
     const unsigned int microseconds = 0;
-
-    // TODO : voir si je peux faire en sorte que b_INPUT_DATA_LENGTH soit renseigné et connu au runtime
-    // Nombre de data_type
-    const unsigned long b_INPUT_DATA_LENGTH   = 4L * 1024L * 1024L * 1024L / sizeof(data_type); // cassidi, sandor : 6L
-  //const unsigned long b_INPUT_DATA_LENGTH   = 6L * 1024L * 1024L * 1024L / sizeof(data_type);
-    const unsigned long b_INPUT_OUTPUT_FACTOR = 128; // taille des sommes partielles
-    const unsigned long b_OUTPUT_DATA_LENGTH  = b_INPUT_DATA_LENGTH / b_INPUT_OUTPUT_FACTOR;
-
-    // Taille en octets calculées
-    // unsigned long b_INPUT_DATA_SIZE;
-    // unsigned long b_OUTPUT_DATA_SIZE;
-
-    //data_type s;
-
+    
     const uint TRACCC_LOG_LEVEL = 0; // Seulement afficher les infos du log 0
 
-    //bool ignore_allocation_times;// = false;
-    // bool ignore_pointer_graph_benchmark;
-    // bool ignore_flatten_benchmark;
+    unsigned long b_INPUT_DATA_LENGTH {} ;
+    unsigned long b_INPUT_OUTPUT_FACTOR {} ;
+    unsigned long b_OUTPUT_DATA_LENGTH {} ;
+    unsigned long in_total_size {} ;
+    unsigned long out_total_size {} ;
 
-    const unsigned long in_total_size  = b_INPUT_DATA_LENGTH  * sizeof(data_type);
-    const unsigned long out_total_size = b_OUTPUT_DATA_LENGTH * sizeof(data_type);
+    void init_data_length( unsigned long gb )
+     {
+      b_INPUT_DATA_LENGTH   = gb * 1024L * 1024L * 1024L / sizeof(data_type); // cassidi, sandor : 6L
+      b_INPUT_OUTPUT_FACTOR = 128; // taille des sommes partielles
+      b_OUTPUT_DATA_LENGTH  = b_INPUT_DATA_LENGTH / b_INPUT_OUTPUT_FACTOR;
+      in_total_size  = b_INPUT_DATA_LENGTH  * sizeof(data_type);
+      out_total_size = b_OUTPUT_DATA_LENGTH * sizeof(data_type);
+     }
 
     enum mem_strategy { pointer_graph, flatten };
 
@@ -166,6 +163,7 @@ namespace ubench_v2 {
 
     // Alloc native + alloc SYCL
     void allocation(bench_variables & b) {
+
         if (be_verbose) log("allocation");
         stime_utils chrono;
         //shared_USM, device_USM, host_USM, accessors, glibc};
@@ -179,6 +177,10 @@ namespace ubench_v2 {
             memset(b.native_input,  1, b_INPUT_DATA_LENGTH  * sizeof(data_type));
             memset(b.native_output, 1, b_OUTPUT_DATA_LENGTH * sizeof(data_type));
             b.c.t_alloc_native = chrono.reset();
+            if (!b.native_input)
+             { throw cl::sycl::exception(cl::sycl::errc::memory_allocation,"native input new failure") ; } 
+            if (!b.native_output)
+             { throw cl::sycl::exception(cl::sycl::errc::memory_allocation,"native output new failure") ; } 
         }
 
         switch(b.mode) {
@@ -215,9 +217,48 @@ namespace ubench_v2 {
         case glibc: // alloc native déjà réalisée
             break;
         }
+        if (is_using_usm(b)) {
+          if (!b.sycl_input)
+           { throw cl::sycl::exception(cl::sycl::errc::memory_allocation,"sycl input malloc failure") ; } 
+          if (!b.sycl_output)
+           { throw cl::sycl::exception(cl::sycl::errc::memory_allocation,"sycl output malloc failure") ; }
+        }
+
     }
 
-    data_type g_expected_sum;
+    void dealloc(bench_variables & b) {
+
+        if (be_verbose) log("dealloc");
+        stime_utils chrono;
+        chrono.start();
+
+        if (is_using_native_memory(b)) {
+            delete[] b.native_input;
+            delete[] b.native_output;
+            b.c.t_dealloc_native = chrono.reset();
+        }
+
+        if (b.mode == sycl_mode::accessors) {
+            delete b.buffer_input;
+            delete b.buffer_output;
+            b.buffer_input  = nullptr;
+            b.buffer_output = nullptr;
+            b.sycl_q.wait_and_throw();
+            b.c.t_dealloc_sycl = chrono.reset();
+        }
+
+        if (is_using_usm(b)) {
+            cl::sycl::free(b.sycl_input,  b.sycl_q);
+            cl::sycl::free(b.sycl_output, b.sycl_q);
+            b.sycl_input  = nullptr;
+            b.sycl_output = nullptr;
+            b.sycl_q.wait_and_throw();
+            b.c.t_dealloc_sycl = chrono.reset();
+        }
+        if (be_verbose) log("Iteration OK.");
+    }
+
+data_type g_expected_sum;
 
     // Pour la vérification des résultats
     void compute_expected_sum() {
@@ -369,37 +410,6 @@ namespace ubench_v2 {
         return sum;
     }
 
-    void dealloc(bench_variables & b) {
-        if (be_verbose) log("dealloc");
-        stime_utils chrono;
-        chrono.start();
-
-        if (is_using_native_memory(b)) {
-            delete[] b.native_input;
-            delete[] b.native_output;
-            b.c.t_dealloc_native = chrono.reset();
-        }
-
-        if (b.mode == sycl_mode::accessors) {
-            delete b.buffer_input;
-            delete b.buffer_output;
-            b.buffer_input  = nullptr;
-            b.buffer_output = nullptr;
-            b.sycl_q.wait_and_throw();
-            b.c.t_dealloc_sycl = chrono.reset();
-        }
-
-        if (is_using_usm(b)) {
-            cl::sycl::free(b.sycl_input,  b.sycl_q);
-            cl::sycl::free(b.sycl_output, b.sycl_q);
-            b.sycl_input  = nullptr;
-            b.sycl_output = nullptr;
-            b.sycl_q.wait_and_throw();
-            b.c.t_dealloc_sycl = chrono.reset();
-        }
-        if (be_verbose) log("Iteration OK.");
-    }
-
 
     traccc_chrono_results traccc_bench(sycl_mode mode, bool explicit_copy) {
 
@@ -432,7 +442,7 @@ namespace ubench_v2 {
             return bench.c; // résultats chronométrés            
             
         } catch (cl::sycl::exception const &e) {
-            std::cout << "An exception has been caught while processing SyCL code.\n";
+            std::cout << "An exception has been caught while processing SyCL code: "<<e.what()<<"\n";
             std::terminate();
         }
     }
@@ -448,7 +458,6 @@ namespace ubench_v2 {
         << mode_to_int(mode) << " " // ------ utile
         << (explicit_copy ? "1" : "0") << " " // 1 copie explicite ; 0 copie automatique
         << "\n";
-
         // Allocation and free on device, for each iteration
         for (int rpt = 0; rpt < REPEAT_COUNT_REALLOC; ++rpt) {
             log("Iteration " + std::to_string(rpt+1) + " on " + std::to_string(REPEAT_COUNT_REALLOC), 2);
@@ -471,12 +480,12 @@ namespace ubench_v2 {
             }
             write_file << "\n";
 
-            ++current_iteration_count;
-            print_total_progress();
+            progress_increment() ;
+            progress_print();
 
             int fdiv = 1000; // ms
             logs(
-                "\n       t_alloc_native(" + std::to_string(cres.t_alloc_native / fdiv) + ") "
+                "t_alloc_native(" + std::to_string(cres.t_alloc_native / fdiv) + ") "
                 + "t_alloc_sycl(" + std::to_string(cres.t_alloc_sycl / fdiv) + ") "
                 + "t_fill(" + std::to_string(cres.t_fill / fdiv) + ") "
                 + "t_copy(" + std::to_string(cres.t_copy / fdiv) + ") "
@@ -493,28 +502,10 @@ namespace ubench_v2 {
     }
 
 
-    // void bench_mem_location_and_strategy(std::ofstream& myfile) {
-
-    //     //log("============    - L = VECTOR_SIZE_PER_ITERATION = " + std::to_string(VECTOR_SIZE_PER_ITERATION));
-    //     //log("============    - M = PARALLEL_FOR_SIZE = " + std::to_string(PARALLEL_FOR_SIZE));
-
-    //     // Implicit copy
-    //     traccc_main_sequence(myfile, sycl_mode::shared_USM, false);
-    //     traccc_main_sequence(myfile, sycl_mode::host_USM,   false);
-    //     traccc_main_sequence(myfile, sycl_mode::accessors,  false);
-    //     traccc_main_sequence(myfile, sycl_mode::glibc,      false);
-
-    //     // (USM) explicit copy
-    //     traccc_main_sequence(myfile, sycl_mode::device_USM, true);
-    //     traccc_main_sequence(myfile, sycl_mode::shared_USM, true);
-    //     traccc_main_sequence(myfile, sycl_mode::host_USM,   true);
-
-    // }
-
-    int main_of_bench_v2(std::string fname) { //std::function<void(std::ofstream &)> bench_function) {
+    int main_of_bench_v2(std::string fname ) { //std::function<void(std::ofstream &)> bench_function) {
         std::ofstream myfile;
         std::string wdir_tmp = std::filesystem::current_path();
-        std::string wdir = wdir_tmp + "/"; // "/output_bench" removed on 2022-11-30
+        std::string wdir = wdir_tmp + "/output/" ;
         std::string output_file_path = wdir + std::string(fname);
 
         if ( file_exists_test0(output_file_path) ) {
@@ -547,7 +538,7 @@ namespace ubench_v2 {
         log("  SYCL BENCH V2 benchmark.  ");
         log("============================");
         
-        std::cout << OUTPUT_FILE_NAME << std::endl;
+        std::cout << fname << std::endl;
         log("");
         log("-------------- " + ver_indicator + " --------------");
         log("");
@@ -562,11 +553,9 @@ namespace ubench_v2 {
         //REPEAT_COUNT_ONLY_PARALLEL_WARMUP_COUNT = 0;
 
 
-        init_progress();
+        progress_init(7);
 
         compute_expected_sum();
-
-        total_main_seq_runs = 7;
 
         // (USM) explicit copy
         traccc_main_sequence(myfile, sycl_mode::device_USM, true);
@@ -597,7 +586,8 @@ namespace ubench_v2 {
         }
     }
 
-    void run_ubench2_single_test(std::string const computer_name, uint run_id) {
+    void run_ubench2_single_test(std::string const computer_name, uint run_id ) {
+        std::string OUTPUT_FILE_NAME ;
         OUTPUT_FILE_NAME =  UBENCH2_VERSION_FILE_PREFIX + "_" + computer_name
                             + "_" + input_size_to_str() + "_RUN"
                             + std::to_string(run_id) 
@@ -607,9 +597,7 @@ namespace ubench_v2 {
         main_of_bench_v2(OUTPUT_FILE_NAME);
     }
 
-    void run_ubench2_tests(std::string const computer_name, uint run_number) {
-        log("run_ubench2_tests RUN");
-        log("run_ubench2_tests RUN");
+    void run_ubench2_tests(std::string const computer_name, uint run_number ) {
         log("run_ubench2_tests RUN");
         for (uint i = 1; i <= run_number; ++i) {
             run_ubench2_single_test(computer_name, i);

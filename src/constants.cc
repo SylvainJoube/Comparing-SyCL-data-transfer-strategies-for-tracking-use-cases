@@ -1,26 +1,10 @@
-#pragma once
-#include <iostream>
-#include <filesystem>
-#include <fstream>
-#include <chrono>
 
-// SyCL specific includes
-#include <CL/sycl.hpp>
-#include <array>
-#include <sys/time.h>
-#include <stdlib.h>
-// #include "intel_noinit_fix.h"
+#include "constants.h"
 
 const int ACAT_START_TEST_INDEX  = 1;
 const int ACAT_STOP_TEST_INDEX   = 2;
 const int ACAT_RUN_COUNT         = 1;
-/*const COMM TEMP ACAT*/ int ACAT_REPEAT_LOAD_COUNT = 10; // TODO : remettre 10, 100 c'est trop loong ! (1 pour test, 2022-09-30)
-
-#define DATA_TYPE unsigned int // TODO : try with unsigned int
-using data_type = DATA_TYPE;
-//using data_type_sum = unsigned long long;
-enum sycl_mode {shared_USM, device_USM, host_USM, accessors, glibc};
-//enum dataset_type {implicit_USM, device_USM, host_USM, accessors};
+int ACAT_REPEAT_LOAD_COUNT = 10;
 
 unsigned long long PARALLEL_FOR_SIZE;// = 1024 * 32 * 8;// = M ; work items number
 unsigned long long VECTOR_SIZE_PER_ITERATION;// = 1; // = L ; vector size per workitem (i.e. parallel_for task) = nb itérations internes par work item
@@ -30,43 +14,9 @@ sycl_mode CURRENT_MODE = sycl_mode::device_USM;
 
 int MEMCOPY_IS_SYCL = 1;
 int SIMD_FOR_LOOP = 1;
-constexpr int USE_NAMED_KERNEL = 1; // Sandor does not support anonymous kernels.
-constexpr bool KEEP_SAME_DATASETS = true; 
 int USE_HOST_SYCL_BUFFER_DMA = 0; 
 
 bool ERR_DEVICE_NOT_FOUND = true;
-
-#define DATA_VERSION 7
-#define DATA_VERSION_TRACCC 108 // 105
-
-// number of diffrent datasets
-#define DATASET_NUMBER 1
-
-#define CHECK_SIMD_CPU false
-
-
-#define INPUT_DATA_LENGTH PARALLEL_FOR_SIZE * VECTOR_SIZE_PER_ITERATION
-#define OUTPUT_DATA_LENGTH PARALLEL_FOR_SIZE
-
-
-#define INPUT_DATA_SIZE INPUT_DATA_LENGTH * sizeof(DATA_TYPE)
-#define OUTPUT_DATA_SIZE OUTPUT_DATA_LENGTH * sizeof(DATA_TYPE)
-
-// faire un repeat sur les mêmes données pour essayer d'utiliser le cache
-// hypothèse : les données sont évincées du cache avant de pouvoir y avoir accès
-// observation : j'ai l'impression d'être un peu en train de me perdre dans les explorations,
-// avoir une liste pour prioriser ce que je dois faire et 
-
-
-// SEE main on bench.cpp
-// SEE main on bench.cpp
-// SEE main on bench.cpp
-// SEE main on bench.cpp
-// SEE main on bench.cpp
-// SEE main on bench.cpp
-// SEE main on bench.cpp
-
-
 
 // number of iterations - no realloc to make it go faster
 int REPEAT_COUNT_REALLOC;// défini dans le main (3) - nombre de fois que le test doit être lancé (défini dans le main)
@@ -81,21 +31,6 @@ std::string MUST_RUN_ON_DEVICE_NAME = "<unknown device>"; //"Intel(R) UHD Graphi
 // How many times the sum should be repeated
 // (to test caches and data access speed)
 uint REPEAT_COUNT_SUM = 1;
-
-//#define OUTPUT_FILE_NAME "sh_output_bench_h53.shared_txt"
-//#define OUTPUT_FILE_NAME "msi_h60_L_M_128MiB_O0.t"
-
-//#define OUTPUT_FILE_NAME "msi_L_M_512MiB_O2_SIMD_2.t"
-//#define OUTPUT_FILE_NAME "sandor_L_M_6GiB_O2_SIMD_2.t"
-//#define OUTPUT_FILE_NAME "msi_L_M_128MiB_O2_SIMD.t"
-//#define OUTPUT_FILE_NAME "sandor_L_M_6GiB_O2.t"
-
-//#define OUTPUT_FILE_NAME "msi_simd_1GiB_O2.t"
-//#define OUTPUT_FILE_NAME "msi_simd_1GiB_O2_debug.temp"
-//#define OUTPUT_FILE_NAME "sandor_simd_6GiB_O2.t"
-//#define OUTPUT_FILE_NAME "sandor_simd_6GiB_O2_debug_simd_temp.t"
-//#define OUTPUT_FILE_NAME "sandor_simd_8GiB_O2_debug_simd_temp.t"
-
 
 std::string BENCHMARK_VERSION = "ubench" + std::to_string(DATA_VERSION); // Sandor compatible  v05
 std::string BENCHMARK_VERSION_TRACCC = "sparseccl" + std::to_string(DATA_VERSION_TRACCC);
@@ -112,48 +47,7 @@ int traccc_SPARSITY_MIN = 0;
 int traccc_SPARSITY_MAX = 100000;
 bool traccc_sparsity_ignore = true;
 
-struct s_runtime_environment {
-public:
-    std::string computer_name;
-    std::string device_name;
-    int device_score;
-    int repeat_load_count = 10; // 100 should be good
-    int runs_count = 1;
-    
-    // micro-benchmark
-    int total_elements = 1024L * 1024L * 128L; // 128 milions elements * 4 bytes => 512 MiB
-    int workitem_L = 128; // nombre of elements per workitem (default = 128)
-
-    std::string get_size_str() {
-        uint64_t size_in_bytes = total_elements * sizeof(data_type);
-        if (size_in_bytes < 1024) return std::to_string(size_in_bytes) + std::string("B");
-        if (size_in_bytes < 1024*1024) return std::to_string(size_in_bytes/1024) + std::string("KiB");
-        if (size_in_bytes < 1024*1024*1024) return std::to_string(size_in_bytes/(1024*1024)) + std::string("MiB");
-        return std::to_string(size_in_bytes/(1024*1024*1024)) + std::string("GiB");
-    }
-
-    // Defined as global variables
-    // const int ACAT_START_TEST_INDEX  = 1;
-    // const int ACAT_STOP_TEST_INDEX   = 2;
-    // const int ACAT_RUN_COUNT         = 1;
-};
-
 s_runtime_environment runtime_environment;
-
-// OUTPUT_FILE_NAME is now obsolete
-std::string OUTPUT_FILE_NAME = "thinkpad_dma_1GiB_O2.t";
-//#define OUTPUT_FILE_NAME "msi_dma_1GiB_O2.t"
-//#define OUTPUT_FILE_NAME "sandor_dma_1GiB_O2.t"
-//#define OUTPUT_FILE_NAME "msi_dma_512MiB_O2.t"
-
-//#define OUTPUT_FILE_NAME "msi_alloc_1GiB_O2.t"
-//#define OUTPUT_FILE_NAME "sandor_alloc_6GiB_O2.t"
-
-//#define OUTPUT_FILE_NAME "sandor_h60_L_M_4GiB_O2.t"
-//#define OUTPUT_FILE_NAME "msi_h60_alloclib_1GiB_O2.t"
-//#define OUTPUT_FILE_NAME "msi_h60_simd_1GiB_O2_20pts.t"
-//#define OUTPUT_FILE_NAME "T580_h60_L_M_128MiB.t"
-//#define OUTPUT_FILE_NAME "T580_h60_simd_128MiB.t"
 
 //const long long total_elements = 1024L * 1024L * 256L * 8L; // 8 GiB
 //const long long total_elements = 1024L * 1024L * 256L * 6L; // 6 GiB
@@ -171,24 +65,6 @@ std::string g_size_str = "0MiB";
 
 std::string ver_indicator = std::string("13d");
 
-// ver_prefix is now obsolete
-std::string ver_prefix = OUTPUT_FILE_NAME + std::string(" - " + ver_indicator); // "X42"
-
-
-
-
-
-
-struct s_computer {
-    std::string fullName, toFileName, deviceName;
-    uint repeat_load_count = 0;
-    long long total_elements = 0;
-    std::string size_str = "0MiB";
-    uint L = 1;
-};
-
-
-const uint g_computer_count = 7;
 s_computer g_computers[g_computer_count];
 
 void init_computers() {
@@ -273,7 +149,7 @@ void init_computers() {
 
 std::string get_computer_name(uint computer_id) {
     if ( (computer_id > g_computer_count) || (computer_id == 0) )
-        return "unknown_computer_id" + std::to_string(computer_id);
+        return "unknown_computer_id " + std::to_string(computer_id);
     
     return g_computers[computer_id - 1].fullName;
     

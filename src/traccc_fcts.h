@@ -16,6 +16,7 @@
 #include <stdlib.h>
 
 #include "utils.h"
+#include "progress.h"
 #include "constants.h"
 
 // Regroupe des fonctions & structures utiles
@@ -480,7 +481,7 @@ namespace traccc {
 
     void read_cells_lite() {
         std::string wdir_tmp = std::filesystem::current_path();
-        std::string bin_path = wdir_tmp + "/events_bin/lite_all_events.bin";
+        std::string bin_path = wdir_tmp + "/input/lite_all_events.bin";
         read_cells_lite(bin_path);
     }
 
@@ -876,7 +877,7 @@ namespace traccc {
         } else { // flatten
             chrono_flatten.reset();
 
-            log("FLATTEN ===== SIZES :");
+            log("===== FLATTEN SIZES :");
             log("flat_input.cells = " + std::to_string(total_cell_count * sizeof(input_cell)));
             log("flat_output.cells = " + std::to_string(total_cell_count * sizeof(output_cell)));
             log("flat_input.modules = " + std::to_string(total_module_count * sizeof(flat_input_module)));
@@ -1883,7 +1884,7 @@ namespace traccc {
         /*
         Fait lors du lancement des tests.  -> read_cells_lite();
         std::string wdir_tmp = std::filesystem::current_path();
-        std::string bin_path = wdir_tmp + "/events_bin/lite_all_events.bin";
+        std::string bin_path = wdir_tmp + "/input/lite_all_events.bin";
         read_cells_lite(bin_path);*/
 
         // TODO : repeat_count pour les lire plusieurs fois
@@ -2016,15 +2017,12 @@ namespace traccc {
 
         // Allocation and free on device, for each iteration
         for (int rpt = 0; rpt < REPEAT_COUNT_REALLOC; ++rpt) {
+
             log("Iteration " + std::to_string(rpt+1) + " on " + std::to_string(REPEAT_COUNT_REALLOC), 2);
 
             traccc_chrono_results cres;
 
             cres = traccc_bench(mode, mstrat);
-
-            
-            //logs("cres.t_alloc_only : " + std::to_string(cres.t_alloc_only));
-            //log(" - cres.t_fill_only : " + std::to_string(cres.t_fill_only));
 
             write_file
             << cres.t_alloc_native << " "
@@ -2040,37 +2038,12 @@ namespace traccc {
             }
             write_file << "\n";
 
-            // write_file
-            // // Rien n'est utile jusqu'aux nouveaux champs pour gtimer.
-            // // j'utilise cependant deux champs de cres parce que ça m'arrange !
-            // << /*gtimer.t_allocation*/ cres.t_alloc_only << " " // nouveau raccourci acat
-            // << gtimer.t_sycl_host_alloc << " " // v6
-            // << gtimer.t_sycl_host_copy << " " // v6
-            // << /*gtimer.t_copy_to_device*/ cres.t_fill_only << " " // nouveau raccourci acat
-            // << gtimer.t_sycl_host_free << " " // v6
-            // // TODO : do the same with alloc/cpy only once
-            // << gtimer.t_parallel_for << " " 
-            // << gtimer.t_read_from_device << " "
-            // << gtimer.t_free_gpu << " "
-
-
-
-            // // Nouveaux champs
-            // << cres.t_alloc_fill << " "
-            // << cres.t_copy_kernel << " "
-            // << cres.t_read << " " // TODO : faire la somme des labels trouvés, pour avoir une lecture complète
-            // << cres.t_free_mem << " "
-            // << cres.t_flatten_alloc << " " // = cres.t_alloc_only
-            // << cres.t_flatten_fill << " "  // = cres.t_fill_only
-
-            // << "\n";
-
-            ++current_iteration_count;
-            print_total_progress();
+            progress_increment();
+            progress_print();
 
             uint fdiv = 1000; // ms
             logs(
-                "\n       t_alloc_native(" + std::to_string(cres.t_alloc_native / fdiv) + ") "
+                " t_alloc_native(" + std::to_string(cres.t_alloc_native / fdiv) + ") "
                 + "t_alloc_sycl(" + std::to_string(cres.t_alloc_sycl / fdiv) + ") "
                 + "t_fill(" + std::to_string(cres.t_fill / fdiv) + ") "
                 + "t_copy(" + std::to_string(cres.t_copy / fdiv) + ") "
@@ -2082,15 +2055,7 @@ namespace traccc {
                 logs("ker" + std::to_string(ik) + "(" + std::to_string(cres.t_kernel[ik] / fdiv) + ") ");
             }
 
-            // logs(
-            //     "\n       allocFill(" + std::to_string(cres.t_alloc_fill / fdiv) + ") "
-            //     + "copyKernel(" + std::to_string(cres.t_copy_kernel / fdiv) + ") "
-            //     + "read(" + std::to_string(cres.t_read / fdiv) + ") "
-            //     + "free(" + std::to_string(cres.t_free_mem / fdiv) + ") "
-            //     + "flatAlloc(" + std::to_string(cres.t_flatten_alloc / fdiv) + ") "
-            //     + "fillAlloc(" + std::to_string(cres.t_flatten_fill / fdiv) + ") ");
-
-            //log("");
+            log("");
         }
 
     }
@@ -2098,10 +2063,12 @@ namespace traccc {
 
     void bench_mem_location_and_strategy(std::ofstream& myfile) {
 
-        //log("============    - L = VECTOR_SIZE_PER_ITERATION = " + std::to_string(VECTOR_SIZE_PER_ITERATION));
-        //log("============    - M = PARALLEL_FOR_SIZE = " + std::to_string(PARALLEL_FOR_SIZE));
-        
-        total_main_seq_runs = 2 * 5;
+        int nb_seq = 0 ;
+        if (!ignore_flatten_benchmark)
+         { nb_seq += 5 ; }
+        if (!ignore_pointer_graph_benchmark)
+         { nb_seq += 3 ; }
+        progress_init(nb_seq);
 
         mem_strategy memory_strategy;
         
@@ -2151,11 +2118,10 @@ namespace traccc {
         }
     }
 
-    int main_of_traccc(std::function<void(std::ofstream &)> bench_function) {
+    int main_of_traccc( const std::string & OUTPUT_FILE_NAME, std::function<void(std::ofstream &)> bench_function) {
         std::ofstream myfile;
         std::string wdir_tmp = std::filesystem::current_path();
-        //std::string wdir = wdir_tmp + "/output_bench/";
-        std::string wdir = wdir_tmp + "/"; // modif 2022-11-30
+        std::string wdir = wdir_tmp + "/output/";
         std::string output_file_path = wdir + std::string(OUTPUT_FILE_NAME);
 
         if ( file_exists_test0(output_file_path) ) {
@@ -2198,8 +2164,6 @@ namespace traccc {
         //if ( ignore_allocation_times ) log("-----> Ignore allocation times.");
         //else                           log("-----> Count allocation times.");
 
-        init_progress();
-
         bench_function(myfile);
         
         myfile.close();
@@ -2222,6 +2186,8 @@ namespace traccc {
 
         bool do_sparse_bench = false;
 
+        std::string OUTPUT_FILE_NAME ;
+
         switch (test_id) {
         //reset_bench_variables();
 
@@ -2231,11 +2197,11 @@ namespace traccc {
 
         // case 1 et 2 utiles pour le papier et la version David
         case 1:
-            OUTPUT_FILE_NAME = BENCHMARK_VERSION_TRACCC + "_generalFlatten" + file_name_const_part; // TRACCC_OUT_FNAME
+            OUTPUT_FILE_NAME = BENCHMARK_VERSION_TRACCC + "_generalFlatten" + file_name_const_part ; // TRACCC_OUT_FNAME
             ignore_pointer_graph_benchmark = true;
             ignore_flatten_benchmark = false;
             // inutile ici implicit_use_unique_module = false;
-            main_of_traccc(bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
             break;
 
         // case 1 et 2 utiles pour le papier et la version David
@@ -2244,7 +2210,7 @@ namespace traccc {
             ignore_pointer_graph_benchmark = false;
             ignore_flatten_benchmark = true;
             implicit_use_unique_module = true;
-            main_of_traccc(bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
             break;
 
         case 3: // inutile pour le papier
@@ -2252,7 +2218,7 @@ namespace traccc {
             ignore_pointer_graph_benchmark = false;
             ignore_flatten_benchmark = true;
             implicit_use_unique_module = false;
-            main_of_traccc(bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
             break;
 
         case 4: // inutile pour le papier
@@ -2260,7 +2226,7 @@ namespace traccc {
             ignore_pointer_graph_benchmark = false;
             ignore_flatten_benchmark = true;
             // inutile ici implicit_use_unique_module = false;
-            main_of_traccc(bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
             break;
 
 
@@ -2287,7 +2253,7 @@ namespace traccc {
             ignore_pointer_graph_benchmark = true;
             ignore_flatten_benchmark = false;
             // inutile ici implicit_use_unique_module = false;
-            main_of_traccc(bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
         }
     }
 
@@ -2358,110 +2324,3 @@ namespace traccc {
 
 }
 
-/*
-
-
-
-*/
-
-
-// Aussi dans sycl_multi_event_implicit_v2.cpp de traccc github publique
-
-    // Je ne vais plus pas utiliser la structure de traccc :
-    // Le but est de mesurer le temps pris par l'allocation, le remplissage,
-    // le calcul kernel et la lecture. (CCL + CCA ou je lis depuis le device toutes les cellules ?)
-    // -> A mon avis juste SparseCCL pour lire plus de données du device et du coup pouvoir mieux
-    // mesurer les performances mémoire.
-    // Donc je veux que mes données soient super rapides et simples à lire en entrée.
-    // Donc structure de base (donc déjà conversion de la structure utilisée par traccc
-    // vers ma structure à moi) :
-
-    // Le plus simple possible est une structure aplatie comme pour le cas explicite que j'ai
-    // codé dans traccc. Je vais faire un seul grand tableau pour toutes les données,
-    // exactement comme la manière dont je vais stocker ces données sur disque.
-    // Le tout est de réduire à l'essentiel les données pour pouvoir se concentrer
-    // sur SparseCCL seulement (donc pas le seeding ni le CCA).
-    // Contenu du fichier (et de la mémoire RAM) :
-    // (nombre de modules)
-    // pour chaque module : (nombre de cases) (liste des )
-
-    // Tableau regroupant tous les (pointeurs vers les) modules
-    // Un module est composé d'un id (peu importe) et d'un tableau de cellules.
-    // Le module pointe vers le tableau de cellules.
-    // En host et shared 
-
-    // 1)   Allocation mémoire sycl
-    // 1.5) Pour device : allocation mémoire host 
-    // 2)   Remplissage mémoire SYCL (depuis données brutes)
-    // 2.5) Pour device : copie explicite vers la mémoire device
-    // 3)   Parallel_for, exécution du kernel
-    // 4.0) Pour device : copie explicite vers la mémoire host
-    // 4)   Lecture des données de sortie (somme des labels des cases pour faire une lecture)
-    //      et somme du nombre de clusters
-
-    // Résultat attendu :
-    // Device : Les allocations initiales du device coutent très cher
-    // mais les accès une fois les données sur device sont rapides.
-    // Shared : Le remplissage sera très lent, et le temps du kernel
-    // plus lent qu'en device.
-    // Host : allocation mémoire lente, et kernel lent, mais sinon rapide car
-    // ne nécessitant pas de copie. Juste ralenti par le parallel_for.
-
-    // La structure de base de laquelle je pars doit être une grande
-
-
-
-
-
-
-
-
-/*
-        unsigned int module_count;
-        rf.read((char *)(&module_count), sizeof(unsigned int));
-
-        fdata[0] = module_count;
-
-        //log("read_cells module_count " + std::to_string(module_count) + " start...");
-
-        //log("read_cells 2");
-
-        //hc_container.headers.reserve(module_count);
-        //hc_container.items.reserve(module_count);
-
-        for (std::size_t im = 0; im < module_count; ++im) {
-            //log("read_cells im " + std::to_string(im) + " start...");
-
-            unsigned int cell_count;
-            rf.read((char *)(&cell_count), sizeof(unsigned int));
-
-            for (std::size_t ic = 0; ic < cell_count; ++ic) {
-                unsigned int chan0, chan1;
-                rf.read((char *)(&chan0), sizeof(unsigned int));
-                rf.read((char *)(&chan1), sizeof(unsigned int));
-            }
-
-            traccc::cell_module module;
-            rf.read((char *)(&module), sizeof(traccc::cell_module));
-            hc_container.headers.push_back(module);
-
-            //hc_container.headers[im] = module;
-            //rf.read((char *)(&hc_container.headers[im]), sizeof(traccc::cell_module));
-            
-            //log("read_cells im " + std::to_string(im) + "cell module loaded");
-
-            //log("read_cells im " + std::to_string(im) + " cells nb = " + std::to_string(cell_count));
-
-            vecmem::vector<traccc::cell> cells;
-
-            cells.reserve(cell_count);
-            //log("read_cells im " + std::to_string(im) + " reserve ok");
-            for (std::size_t ic = 0; ic < cell_count; ++ic) {
-                traccc::cell cell;
-                rf.read((char *)(&cell), sizeof(traccc::cell));
-                cells.push_back(cell);
-            }
-            hc_container.items.push_back(cells);
-            //log("read_cells im " + std::to_string(im) + " all cells read.");
-        }
-        */

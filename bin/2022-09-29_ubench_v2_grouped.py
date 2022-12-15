@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 # Hello world python program
 
@@ -87,8 +87,8 @@ def load_file(filename, isFlatten, multiplyFactor):
     global global_kernel_retain
     global VERSION_ATTENDUE
 
-    # absolute_filepath = "/home/data_sync/academique/These/SYCL_tests/mem_bench/output_bench/" + filename
-    absolute_filepath = "../output_bench/" + filename
+    # absolute_filepath = "/home/data_sync/academique/These/SYCL_tests/mem_bench/output/" + filename
+    absolute_filepath = "../output/" + filename
 
     with open(absolute_filepath) as fp:
         version = fp.readline() # version du fichier actuel (doit être 106 et non plus 105)

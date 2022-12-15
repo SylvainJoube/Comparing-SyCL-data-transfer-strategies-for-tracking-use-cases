@@ -1,14 +1,17 @@
 # Comparing SyCL data transfer strategies for tracking use cases
 
-Doc faite super à l'arrache, juste pour indiquer la marche à suivre, à un moment je ferai une version anglaise.
-
 1. Cloner le repo sur la machine sur laquelle faire les tests.
 
-2. Définir la variable d'environnement `SBENCH_SYCL_COMPILER_CMD` : elle doit indiquer le chemin absolu vers le compilateur. Exemples :
+2. Preparation des répertoires, mises à jour du PATH, définition des alias :
+
+```
+source env.sh
+```
+
+3. Définir la variable d'environnement `SBENCH_SYCL_COMPILER_CMD` : elle doit indiquer le chemin absolu vers le compilateur. Exemples :
 
 ```bash
-# DPC++ installé
-# Potentiellement défini via quelque chose du genre : source ~/intel/oneapi/setvars.sh
+# DPC++ installé, potentiellement défini via quelque chose du genre : source ~/intel/oneapi/setvars.sh
 export SBENCH_SYCL_COMPILER_CMD=dpcpp
 
 # DPC++ compilé
@@ -16,18 +19,66 @@ export SBENCH_SYCL_COMPILER_CMD="/...full_path.../llvm/build/bin/clang++ -fsycl 
 
 # HipSYCL
 export SBENCH_SYCL_COMPILER_CMD=syclcc
-
-# etc.
 ```
 
-3. Dans le dossier du git, faire `make build` pour créer l'exécutable `bin/bench`.
-4. Faire `make run` (ou directement `./bin/bench`).
-5. `Please provide the score of the device you wish to use:` => Indiquer le score du périphérique sur lequel exécuter le benchmark. (les scores de chaque device sont listés juste au-dessus, dans le terminal)
-6. Si le score entré est valide, il demande confirmation `Device selected: Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz`. Appuyer sur entrée (le `Please press enter to continue...`).
-7. `Load count value (traccc): (default = 10)` est le nombre de fois que devra être répété le chargement du fichier `events_bin/lite_all_events.bin`. USM host prend énormément de temps. Dans l'idéal, sur une grosse machine (comme cassidi ou sandor), une valeur de `100` est recommandée (mais ça prend facilement une heure à tourner, si ce n'est plus) donc une valeur de `10` pour commencer c'est déjà très bien. Faire entrée ne fonctionne pas, il faut soit entrer un nombre, soit une chaine de caractères (qui sera vue comme étant invalide, donc sélection de la valeur par défaut).
-8. Il y a confirmation : `Selected load count value (traccc): 10` puis `Please press enter to continue...`.
-9. Appuyer sur entrée, et le banchmark se lance.
-10. Les fichiers à récupérer pour pouvoir les visualiser sont ceux qui se terminent en **.t** : 
+4. Dans le dossier principal, faire `make build`.
+
+5. Tourner les programmes SYCL de votre choix :
+
+- `lsd` ou `list_devices.exe` : liste les devices.
+- `ubench <score> <data-size-gb> <repeat>` ou `micro_bench.exe <score> <data-size-gb> <repeat>` : exécute sur le device de score `<score>` le banc d'essai ubench, pour une taille de `<data-size-gb>` Gb (1 par défaut), et en répétant les mêmes calculs et échanges de données `<repeat>` fois (12 par défaut).
+- `sparse <score> <load-count-value> <repeat>` ou `sparse_ccl.exe <score> <load-count-value> <repeat>` : exécute sur le device de score `<score>` le banc d'essai sparsecll, en duplicant les données `<load-count-value>` fois (1 par défaut), et en répétant les mêmes calculs et échanges de données `<repeat>` fois (12 par défaut).
+
+
+**Quand le fichier de sortie existe déjà, le programme ne le refait pas**.
+
+6. Les résultats sont produits dans des fichiers `output/*.t` :
   - `sparseccl108_generalFlatten_[nom ordi]_ld[valeur de ld]_RUN1_[nom du device].t`
   - `sparseccl108_generalGraphPtr_uniqueModules_[nom ordi]_ld[valeur de ld]_RUN1_[nom du device].t`
   - `ubench2_2_[nom ordi]_4GiB_RUN1_[nom du device].t`
+
+# A faire
+
+- ne pas laisser trainer de fichier de sortie incomplet si l'execution a echoué avant la fin.
+
+
+# Pile d'appel micro_bench.cpp
+
+- ubench_v2::init_data_length(gb)
+- ubench_v2::run_ubench2_tests(runtime_environment.computer_name, runtime_environment.runs_count)
+  - run_ubench2_single_test(computer_name, i) * runtime_environment.runs_count // == 1 ?!? 
+    - main_of_bench_v2(OUTPUT_FILE_NAME)
+      - progress_init(7)
+      - // (USM) explicit copy
+      - traccc_main_sequence(myfile, sycl_mode::device_USM, true);
+      - traccc_main_sequence(myfile, sycl_mode::shared_USM, true);
+      - traccc_main_sequence(myfile, sycl_mode::host_USM,   true);
+      - // Implicit copy
+      - traccc_main_sequence(myfile, sycl_mode::shared_USM, false);
+      - traccc_main_sequence(myfile, sycl_mode::host_USM,   false);
+      - traccc_main_sequence(myfile, sycl_mode::accessors,  false);
+      - traccc_main_sequence(myfile, sycl_mode::glibc,      false);
+        * REPEAT_COUNT_REALLOC
+        - traccc_bench(mode, explicit_copy);
+          - allocation(bench);
+          - fill(bench);
+          - copy(bench);
+          - kernel(bench);
+          - data_type sum = read(bench);
+          - dealloc(bench);
+        - progress_increment() ;
+        - progress_print();
+
+
+
+# Notes diverses
+
+To run with syclcc, set those variables :
+export HIPSYCL_TARGETS="cuda:sm_35" && \
+export HIPSYCL_GPU_ARCH="sm_35" && \
+export HIPSYCL_CUDA_PATH="/usr/local/cuda-10.1"
+
+On Sandor :
+export HIPSYCL_TARGETS="cuda:sm_75" && \
+export HIPSYCL_GPU_ARCH="sm_75" && \
+export HIPSYCL_CUDA_PATH="/usr/local/cuda-10.1"
