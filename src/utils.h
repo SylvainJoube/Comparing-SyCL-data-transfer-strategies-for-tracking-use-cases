@@ -6,7 +6,7 @@
 #include <chrono>
 
 // SyCL specific includes
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 #include <array>
 #include <sys/time.h>
 #include <stdlib.h>
@@ -203,44 +203,69 @@ void delete_datasets(host_dataset* hdata, uint a_DATASET_NUMBER) ;
 // Only show once
 static bool only_show_once_right_device_found_has_been_found = false;
 
-/* Classes can inherit from the device_selector class to allow users
- * to dictate the criteria for choosing a device from those that might be
- * present on a system. This example looks for a device with SPIR support
- * and prefers GPUs over CPUs. */
-// Selects the device named MUST_RUN_ON_DEVICE_NAME.
-class custom_device_selector : public cl::sycl::device_selector {
-private:
-    cl::sycl::default_selector def_selector;
-public:
-    custom_device_selector() : cl::sycl::device_selector() {}
+// /* Classes can inherit from the device_selector class to allow users
+//  * to dictate the criteria for choosing a device from those that might be
+//  * present on a system. This example looks for a device with SPIR support
+//  * and prefers GPUs over CPUs. */
+// // Selects the device named MUST_RUN_ON_DEVICE_NAME.
+// class custom_device_selector : public cl::sycl::device_selector {
+// private:
+//     cl::sycl::default_selector def_selector;
+// public:
+//     custom_device_selector() : cl::sycl::device_selector() {}
 
-    /* The selection is performed via the () operator in the base
-    * selector class.This method will be called once per device in each
-    * platform. Note that all platforms are evaluated whenever there is
-    * a device selection. */
-    int operator()(const cl::sycl::device& device) const override {
+//     /* The selection is performed via the () operator in the base
+//     * selector class.This method will be called once per device in each
+//     * platform. Note that all platforms are evaluated whenever there is
+//     * a device selection. */
+//     int operator()(const cl::sycl::device& device) const override {
         
-        if ( ! FORCE_EXECUTION_ON_NAMED_DEVICE ) {
-            // Use the default recommended device
-            return def_selector(device);
-        } else {
-            // Use the specified device
-            // Multiple devices may have the same name but not the same score
-            // so I return the device score if it has the right name
-            // and -1 (i.e. never choose this one) otherwise.
-            std::string devName =  device.get_info<cl::sycl::info::device::name>();
-            if (devName.compare(MUST_RUN_ON_DEVICE_NAME) == 0) {
-                int devScore = def_selector(device);
-                if ( ! only_show_once_right_device_found_has_been_found) {
-                    log("Right device found, score(" + std::to_string(devScore) + ") - " + devName);
-                    only_show_once_right_device_found_has_been_found = true;
-                }
-                return devScore;
-            }
-            return -1;
-        }
-    }
-};
+//         if ( ! FORCE_EXECUTION_ON_NAMED_DEVICE ) {
+//             // Use the default recommended device
+//             return def_selector(device);
+//         } else {
+//             // Use the specified device
+//             // Multiple devices may have the same name but not the same score
+//             // so I return the device score if it has the right name
+//             // and -1 (i.e. never choose this one) otherwise.
+//             std::string devName =  device.get_info<cl::sycl::info::device::name>();
+//             if (devName.compare(MUST_RUN_ON_DEVICE_NAME) == 0) {
+//                 int devScore = def_selector(device);
+//                 if ( ! only_show_once_right_device_found_has_been_found) {
+//                     log("Right device found, score(" + std::to_string(devScore) + ") - " + devName);
+//                     only_show_once_right_device_found_has_been_found = true;
+//                 }
+//                 return devScore;
+//             }
+//             return -1;
+//         }
+//     }
+// };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Generic device selector that asks the user to choose on which device to
 // run the benchmark.

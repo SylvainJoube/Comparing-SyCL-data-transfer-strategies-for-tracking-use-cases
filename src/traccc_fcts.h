@@ -10,7 +10,7 @@
 #include <string>
 
 // SyCL specific includes
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 #include <array>
 #include <sys/time.h>
 #include <stdlib.h>
@@ -1892,7 +1892,33 @@ namespace traccc {
 
         //log("=== Mode " + mode_to_string(mode) + " ===");
 
-        custom_device_selector d_selector;
+
+
+
+
+
+        // The custom device selector is now a lambda function.
+        // It captures any necessary variables and returns an integer score.
+        auto d_selector = [](const sycl::device& device) {
+          if (!FORCE_EXECUTION_ON_NAMED_DEVICE) {
+              // Use the default selector's scoring mechanism.
+              // A GPU is preferred over a CPU.
+              if (device.is_gpu()) return 100;
+              if (device.is_cpu()) return 50;
+              return -1; // Reject other devices
+          } else {
+              // Force selection of a device by name.
+              std::string devName = device.get_info<sycl::info::device::name>();
+              if (devName.find(MUST_RUN_ON_DEVICE_NAME) != std::string::npos) {
+                  log("Right device found: " + devName);
+                  return 150; // Return a high score to ensure it's picked
+              }
+              return -1; // Reject all other devices
+          }
+        };
+
+
+        // custom_device_selector d_selector;
         try {
             //chrono.reset(); //t_start = get_ms();
             cl::sycl::queue sycl_q(d_selector, exception_handler);
@@ -2311,10 +2337,10 @@ namespace traccc {
 
         // Tests to compare against, to check graphs validity
         //int test_runs_count = runs_count;
-        for (uint irun = 1; irun <= runs_count; ++irun) {
+        for (int irun = 1; irun <= runs_count; ++irun) {
             // 1 et 2 seulement
             // modifié en 2 seulement pour graphe ptr
-            for (uint itest = start_text_index; itest <= stop_test_index; ++itest) { // --> 6 pour prendre en compte sparsity
+            for (int itest = start_text_index; itest <= stop_test_index; ++itest) { // --> 6 pour prendre en compte sparsity
                 run_single_test_generic_traccc(computer_name, itest, irun);
             }
         }
