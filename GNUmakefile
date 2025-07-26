@@ -13,7 +13,7 @@ EXES = $(patsubst src/%.cpp,bin/%.exe,$(PRGS))
 
 # Options
 CXX = $(SBENCH_SYCL_COMPILER_CMD)
-CXXFLAGS = -I./src -O2 -std=c++17 -Wall# Or -O0 -g instead of -O2
+CXXFLAGS = -I./src -O3 -std=c++20 -fsycl -Wall# Or -O0 -g instead of -O2
 
 all: build
 
