@@ -203,6 +203,7 @@ void delete_datasets(host_dataset* hdata, uint a_DATASET_NUMBER) ;
 // Only show once
 static bool only_show_once_right_device_found_has_been_found = false;
 
+// DEL25
 // /* Classes can inherit from the device_selector class to allow users
 //  * to dictate the criteria for choosing a device from those that might be
 //  * present on a system. This example looks for a device with SPIR support
@@ -266,68 +267,68 @@ static bool only_show_once_right_device_found_has_been_found = false;
 
 
 
+// DEL25
+// // Generic device selector that asks the user to choose on which device to
+// // run the benchmark.
+// class selector_list_devices_generic : public ::sycl::device_selector {
+// private:
+//     ::sycl::default_selector def_selector;
+//     // print_devices=true  => 1) print devices and asks the user to pick a score
+//     // print_devices=false => 2) silently selects the desired device for running the benchmark
+//     bool print_devices    = true;
+//     int  choosen_score;
+// public:
+//     selector_list_devices_generic() : ::sycl::device_selector() {}
+//     selector_list_devices_generic(int _choosen_score) : ::sycl::device_selector(), choosen_score(_choosen_score) {
+//         log("choosen score : " + std::to_string(choosen_score));
+//         print_devices = false;
+//     }
 
-// Generic device selector that asks the user to choose on which device to
-// run the benchmark.
-class selector_list_devices_generic : public ::sycl::device_selector {
-private:
-    ::sycl::default_selector def_selector;
-    // print_devices=true  => 1) print devices and asks the user to pick a score
-    // print_devices=false => 2) silently selects the desired device for running the benchmark
-    bool print_devices    = true;
-    int  choosen_score;
-public:
-    selector_list_devices_generic() : ::sycl::device_selector() {}
-    selector_list_devices_generic(int _choosen_score) : ::sycl::device_selector(), choosen_score(_choosen_score) {
-        log("choosen score : " + std::to_string(choosen_score));
-        print_devices = false;
-    }
-
-    /* The selection is performed via the () operator in the base
-    * selector class.This method will be called once per device in each
-    * platform. Note that all platforms are evaluated whenever there is
-    * a device selection. */
-    int operator()(const ::sycl::device& device) const override {
+//     /* The selection is performed via the () operator in the base
+//     * selector class.This method will be called once per device in each
+//     * platform. Note that all platforms are evaluated whenever there is
+//     * a device selection. */
+//     int operator()(const ::sycl::device& device) const override {
         
-        // List device names and return the default score for the device
-        std::string devName =  device.get_info<::sycl::info::device::name>();
-        if (print_devices) logs(devName);
+//         // List device names and return the default score for the device
+//         std::string devName =  device.get_info<::sycl::info::device::name>();
+//         if (print_devices) logs(devName);
 
-        std::string devType = "";
-        switch (device.get_info<::sycl::info::device::device_type>()) {
-        case ::sycl::info::device_type::cpu :  devType = "cpu"; break;
-        case ::sycl::info::device_type::gpu :  devType = "gpu"; break;
-        case ::sycl::info::device_type::host : devType = "host"; break;
-        default : devType = "unknown type"; break;
-        }
-        if (print_devices) logs(" (" + devType + ")");
+//         std::string devType = "";
+//         switch (device.get_info<::sycl::info::device::device_type>()) {
+//         case ::sycl::info::device_type::cpu :  devType = "cpu"; break;
+//         case ::sycl::info::device_type::gpu :  devType = "gpu"; break;
+//         case ::sycl::info::device_type::host : devType = "host"; break;
+//         default : devType = "unknown type"; break;
+//         }
+//         if (print_devices) logs(" (" + devType + ")");
 
-        int defaultScore = def_selector(device);
+//         int defaultScore = def_selector(device);
 
-        // log("compare score(" + std::to_string(defaultScore) + ") - choosen(" + std::to_string(choosen_score) + ")");
+//         // log("compare score(" + std::to_string(defaultScore) + ") - choosen(" + std::to_string(choosen_score) + ")");
 
-        if ( (! print_devices) && (defaultScore == choosen_score) ) {
+//         if ( (! print_devices) && (defaultScore == choosen_score) ) {
 
-            // base_traccc_repeat_load_count = c->repeat_load_count;
+//             // base_traccc_repeat_load_count = c->repeat_load_count;
 
-            // total_elements = c->total_elements;
-            // g_size_str = c->size_str;
-            // BASE_VECTOR_SIZE_PER_ITERATION = c->L;
-            log("Device selected: " + devName);
-            runtime_environment.computer_name = sys_get_hostname();
-            runtime_environment.device_name   = devName;
-            runtime_environment.device_score  = choosen_score;
-            // FORCE_EXECUTION_ON_NAMED_DEVICE   = true; set as const
-            MUST_RUN_ON_DEVICE_NAME           = devName;
-            ERR_DEVICE_NOT_FOUND              = false;
-        }
+//             // total_elements = c->total_elements;
+//             // g_size_str = c->size_str;
+//             // BASE_VECTOR_SIZE_PER_ITERATION = c->L;
+//             log("Device selected: " + devName);
+//             runtime_environment.computer_name = sys_get_hostname();
+//             runtime_environment.device_name   = devName;
+//             runtime_environment.device_score  = choosen_score;
+//             // FORCE_EXECUTION_ON_NAMED_DEVICE   = true; set as const
+//             MUST_RUN_ON_DEVICE_NAME           = devName;
+//             ERR_DEVICE_NOT_FOUND              = false;
+//         }
 
-        if (print_devices) log(" - score " + std::to_string(defaultScore));
+//         if (print_devices) log(" - score " + std::to_string(defaultScore));
 
-        // Return the default device score
-        return defaultScore;
-    }
-};
+//         // Return the default device score
+//         return defaultScore;
+//     }
+// };
 
 /*
 Taken from : https://github.com/codeplaysoftware/computecpp-sdk/blob/master/samples/custom-device-selector.cpp#L46

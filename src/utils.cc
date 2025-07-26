@@ -155,7 +155,7 @@ host_dataset* generate_datasets(uint a_DATASET_NUMBER, uint a_INPUT_DATA_LENGTH,
 
     host_dataset *hdata = new host_dataset[a_DATASET_NUMBER];
 
-    for (int i = 0; i < a_DATASET_NUMBER; ++i) {
+    for (uint i = 0; i < a_DATASET_NUMBER; ++i) {
         host_dataset *hd = &hdata[i];
 
         hd->data_input = new data_type[a_INPUT_DATA_LENGTH];
@@ -165,7 +165,7 @@ host_dataset* generate_datasets(uint a_DATASET_NUMBER, uint a_INPUT_DATA_LENGTH,
         srand(hd->seed);
 
         // Fills the array with random data
-        for (int i = 0; i < a_INPUT_DATA_LENGTH; ++i) {
+        for (uint i = 0; i < a_INPUT_DATA_LENGTH; ++i) {
             data_type v = rand();
             hd->data_input[i] = v;
             hd->final_result_verif += v;
@@ -175,9 +175,9 @@ host_dataset* generate_datasets(uint a_DATASET_NUMBER, uint a_INPUT_DATA_LENGTH,
         if (a_CHECK_SIMD_CPU) {
             data_type sum_simd_check_cpu = 0;
             // SIMD-like check
-            for (int ip = 0; ip < a_PARALLEL_FOR_SIZE; ++ip) {
-                for (int it = 0; it < a_VECTOR_SIZE_PER_ITERATION; ++it) {
-                    int iindex = ip + it * a_PARALLEL_FOR_SIZE;
+            for (uint ip = 0; ip < a_PARALLEL_FOR_SIZE; ++ip) {
+                for (uint it = 0; it < a_VECTOR_SIZE_PER_ITERATION; ++it) {
+                    uint iindex = ip + it * a_PARALLEL_FOR_SIZE;
                     sum_simd_check_cpu += hd->data_input[iindex];
                 }
             }
@@ -204,7 +204,7 @@ host_dataset* generate_datasets(uint a_DATASET_NUMBER, uint a_INPUT_DATA_LENGTH,
 void delete_datasets(host_dataset* hdata, uint a_DATASET_NUMBER) {
     if (hdata == nullptr) return;
 
-    for (int i = 0; i < a_DATASET_NUMBER; ++i) {
+    for (uint i = 0; i < a_DATASET_NUMBER; ++i) {
         host_dataset *hd = &hdata[i];
         delete[] hd->data_input;
         delete[] hd->data_output;

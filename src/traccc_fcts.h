@@ -383,7 +383,7 @@ namespace traccc {
         
         // pas d'incrément de ind
         for (; i_all_data < total_int_written; ) {
-            uint cell_count = read_source();
+            int cell_count = read_source();
             i_all_data += cell_count * 2; // chan0 + chan1
 
             // mauvaise valeur de sparsité
@@ -404,7 +404,7 @@ namespace traccc {
         uint i_rsd = 0;
 
         for (; i_all_data < total_int_written; ) {
-            uint cell_count = read_source();
+            int cell_count = read_source();
 
             // mauvaise valeur de sparsité
             if ( (cell_count > traccc_SPARSITY_MAX)
@@ -414,7 +414,7 @@ namespace traccc {
               }
             
             right_sparse_data[i_rsd++] = cell_count;
-            for (uint ic = 0; ic < cell_count; ++ic) {
+            for (int ic = 0; ic < cell_count; ++ic) {
                 right_sparse_data[i_rsd++] = read_source(); // chan 0
                 right_sparse_data[i_rsd++] = read_source(); // chan 1
             }
@@ -1690,7 +1690,7 @@ namespace traccc {
             if (implicit_use_unique_module) {
                 // un seul module pour les in/out
 
-                for (int module_index = 0; module_index < total_module_count; ++module_index) {
+                for (uint module_index = 0; module_index < total_module_count; ++module_index) {
                     total_cluster_count += b.implicit_modules[module_index].cluster_count;
 
                     // Somme de tous les labels des cellules
@@ -1703,7 +1703,7 @@ namespace traccc {
 
             } else { // utilisation des modules in/out
 
-                for (int module_index = 0; module_index < total_module_count; ++module_index) {
+                for (uint module_index = 0; module_index < total_module_count; ++module_index) {
                     total_cluster_count += b.implicit_modules_out[module_index].cluster_count;
 
                     // Somme de tous les labels des cellules
@@ -1716,7 +1716,7 @@ namespace traccc {
             }
         } else {
             // Valable pour tout : accesseurs, glibc, device, host et shared.
-            for (int module_index = 0; module_index < total_module_count; ++module_index) {
+            for (uint module_index = 0; module_index < total_module_count; ++module_index) {
                 total_cluster_count += b.flat_output.modules[module_index].cluster_count;
             }
 
@@ -1987,7 +1987,7 @@ namespace traccc {
         }
     }
 
-    void write_chrono_results(traccc_chrono_results cres, std::ofstream& myfile) {
+    void write_chrono_results([[maybe_unused]] traccc_chrono_results cres, [[maybe_unused]] std::ofstream& myfile) {
         
         struct traccc_chrono_results {
             uint t_alloc_fill, t_copy_kernel, t_read, t_free_mem;
@@ -2291,7 +2291,7 @@ namespace traccc {
 
         // Tests to compare against, to check graphs validity
         //int test_runs_count = runs_count;
-        for (uint irun = 1; irun <= runs_count; ++irun) {
+        for (int irun = 1; irun <= runs_count; ++irun) {
             for (uint itest = 1; itest <= 4; ++itest) { // --> 6 pour prendre en compte sparsity
                 run_single_test_generic_traccc(computer_name, itest, irun);
             }
@@ -2309,10 +2309,10 @@ namespace traccc {
 
         // Tests to compare against, to check graphs validity
         //int test_runs_count = runs_count;
-        for (uint irun = 1; irun <= runs_count; ++irun) {
+        for (int irun = 1; irun <= runs_count; ++irun) {
             // 1 et 2 seulement
             // modifié en 2 seulement pour graphe ptr
-            for (uint itest = ACAT_START_TEST_INDEX; itest <= ACAT_STOP_TEST_INDEX; ++itest) { // --> 6 pour prendre en compte sparsity
+            for (int itest = ACAT_START_TEST_INDEX; itest <= ACAT_STOP_TEST_INDEX; ++itest) { // --> 6 pour prendre en compte sparsity
                 run_single_test_generic_traccc(computer_name, itest, irun);
             }
         }
@@ -2324,10 +2324,10 @@ namespace traccc {
         base_traccc_repeat_load_count = runtime_environment.repeat_load_count;
 
         // Tests to compare against, to check graphs validity
-        for (uint irun = 1; irun <= runtime_environment.runs_count; ++irun) {
+        for (int irun = 1; irun <= runtime_environment.runs_count; ++irun) {
             // 1 et 2 seulement
             // modifié en 2 seulement pour graphe ptr
-            for (uint itest = ACAT_START_TEST_INDEX; itest <= ACAT_STOP_TEST_INDEX; ++itest) { // --> 6 pour prendre en compte sparsity
+            for (int itest = ACAT_START_TEST_INDEX; itest <= ACAT_STOP_TEST_INDEX; ++itest) { // --> 6 pour prendre en compte sparsity
                 run_single_test_generic_traccc(runtime_environment.computer_name, itest, irun);
             }
         }
