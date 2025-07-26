@@ -19,6 +19,13 @@
 #include "progress.h"
 #include "constants.h"
 
+#include <kwk/context/sycl/context.hpp>
+#include <kwk/context/eve/context.hpp>
+#include <kwk/algorithm/algos/for_each.hpp>
+#include <kwk/algorithm/algos/reduce.hpp>
+#include <kwk/container.hpp>
+
+
 // Regroupe des fonctions & structures utiles
 namespace traccc {
 
@@ -886,7 +893,8 @@ namespace traccc {
 
             // Alloc - b.mode == sycl_mode::device_USM était avec malloc_host avant
             // Changement : mémoire USM device allouée via glibc
-            if ( (b.mode == sycl_mode::glibc)  ||  (b.mode == sycl_mode::device_USM) ) {
+            // 2025: Utilisation de vues Kiwaku sur les données
+            if ( (b.mode == sycl_mode::glibc)  ||  (b.mode == sycl_mode::device_USM)  ||  (b.mode == sycl_mode::kiwaku) ) {
                 b.flat_input.cells  = new input_cell[total_cell_count];
                 b.flat_output.cells = new output_cell[total_cell_count];
                 b.flat_input.modules = new flat_input_module[total_module_count];
@@ -1659,6 +1667,149 @@ namespace traccc {
             }
 
             // ================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            // ============================ KIWAKU ============================
+            // Exécution du kernel
+            if ( b.mode == sycl_mode::kiwaku ) {
+              // ==== parallel for ====
+              class MyKernel_flat_acc;
+
+              const unsigned int total_module_count_const = total_module_count;
+              const unsigned int max_cell_count_per_module = 1000;
+              
+              // TODO: convertir ça en vues Kiwaku, et importer Kiwaku.
+              // Input buffers
+              ::sycl::buffer<traccc::input_cell, 1> *buffer_input_cells  = b.flat_input.buffer_cells; // wraps b.flat_input.cells
+              ::sycl::buffer<traccc::flat_input_module, 1> *buffer_input_modules  = b.flat_input.buffer_modules; // wraps b.flat_input.modules
+
+              // Output buffers
+              ::sycl::buffer<traccc::output_cell, 1> *buffer_output_cells  = b.flat_output.buffer_cells; // wraps b.flat_output.cells
+              ::sycl::buffer<traccc::flat_output_module, 1> *buffer_output_modules  = b.flat_output.buffer_modules; // wraps b.flat_output.modules
+              
+
+              // Lancement de plusieurs kernels à la suite
+              for (uint ik = 0; ik < b.chres.kernel_count; ++ik) {
+                  
+                  b.sycl_q.submit([&](::sycl::handler &h) {
+
+                      // Initialisation via le constructeur des accesseurs
+                      ::sycl::accessor a_input_cells(*buffer_input_cells, h, ::sycl::read_only);
+                      ::sycl::accessor a_input_modules(*buffer_input_modules, h, ::sycl::read_only);
+
+                      ::sycl::accessor a_output_cells(*buffer_output_cells, h, ::sycl::write_only, ::sycl::no_init); // noinit non supporté par hipsycl visiblement
+                      ::sycl::accessor a_output_modules(*buffer_output_modules, h, ::sycl::write_only, ::sycl::no_init);
+
+                      h.parallel_for(::sycl::range<1>(total_module_count_const), [=](::sycl::id<1> module_indexx) {
+                          uint module_index = module_indexx[0] % total_module_count_const;
+                          // ---- SparseCCL part ----
+
+                          //traccc::flat_input_module * module_in
+
+                          uint first_cindex = a_input_modules[module_index].cell_start_index;
+                          uint cell_count = a_input_modules[module_index].cell_count;
+                          // uint cell_index = first_cindex;
+                          // uint stop_cindex = first_cindex + cell_count;
+
+                          // ...
+
+                          // The very dirty part : statically allocate a buffer of the maximum pixel density per module...
+                          uint L[max_cell_count_per_module];
+
+                          for (uint ic = 0; ic < cell_count; ++ic) {
+                              a_output_cells[first_cindex + ic].label = 0;
+                              // init oublié ?
+                              L[ic] = 0; /// max_cell_count_per_module
+                          }
+
+                          unsigned int start_j = 0;
+                          for (unsigned int i=0; i < cell_count; ++i){
+                              L[i] = i;
+                              int ai = i;
+                              if (i > 0){
+
+                                  const input_cell &ci = a_input_cells[first_cindex + i];
+
+                                  for (unsigned int j = start_j; j < i; ++j){
+                                      const input_cell &cj = a_input_cells[first_cindex + j];
+                                      if (is_adjacent(ci, cj)){
+                                          ai = make_union(L, ai, find_root(L, j));
+                                      } else if (is_far_enough(ci, cj)){
+                                          ++start_j;
+                                      }
+                                  }
+                              }
+                          }
+
+                          // second scan: transitive closure
+                          uint labels = 0;
+                          for (unsigned int i = 0; i < cell_count; ++i){
+                              unsigned int l = 0;
+                              if (L[i] == i){
+                                  ++labels;
+                                  l = labels; 
+                              } else {
+                                  l = L[L[i]];
+                              }
+                              L[i] = l;
+                          }
+
+                          // Update the output values
+                          for (unsigned int i = 0; i < cell_count; ++i){
+                              a_output_cells[first_cindex + i].label = L[i];
+                          }
+                          a_output_modules[module_index].cluster_count = labels;
+                      });
+                  }).wait_and_throw();
+
+                  b.sycl_q.wait_and_throw();
+                  b.chres.t_kernel[ik] = chrono.reset();
+              }
+
+              // récupération des données dans les buffers hôte : à l'étape read_memory
+              // (*buffer_output_cells).get_access<::sycl::access::mode::read>();
+              // (*buffer_output_modules).get_access<::sycl::access::mode::read>();
+
+              // (*b.flat_output.buffer_cells).get_access<::sycl::access::mode::read>();
+              // (*b.flat_output.buffer_modules).get_access<::sycl::access::mode::read>();
+              // b.sycl_q.wait_and_throw();
+
+              // b.chres.t_read = chrono.reset();
+          }
+          // ================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         }
 
         // b.chres.t_kernel1 = chrono.reset();
@@ -1674,12 +1825,38 @@ namespace traccc {
         stime_utils chrono;
         chrono.reset();
 
-        if ( b.mode == sycl_mode::accessors ) {
-            (*b.flat_output.buffer_cells).get_access<::sycl::access::mode::read>();
-            (*b.flat_output.buffer_modules).get_access<::sycl::access::mode::read>();
-            b.sycl_q.wait_and_throw();
-            //b.chres.t_read = chrono.reset(); fait à la fin
+        // DEL25
+        // if ( b.mode == sycl_mode::accessors ) {
+        //     (*b.flat_output.buffer_cells).get_host_access<::sycl::access::mode::read>();
+        //     (*b.flat_output.buffer_modules).get_host_access<::sycl::access::mode::read>();
+        //     b.sycl_q.wait_and_throw();
+        //     //b.chres.t_read = chrono.reset(); fait à la fin
+        // }
+
+        // Code Gemini
+        if (b.mode == sycl_mode::accessors) {
+          // In SYCL 2020, to synchronize data back to the host, you submit a
+          // command group that requests a host_accessor for each buffer.
+          b.sycl_q.submit([&](sycl::handler& cgh) {
+              // Requesting these accessors signals the runtime that the buffer
+              // data must be made available on the host for reading.
+              sycl::host_accessor host_cells(*b.flat_output.buffer_cells, cgh, sycl::read_only);
+              sycl::host_accessor host_modules(*b.flat_output.buffer_modules, cgh, sycl::read_only);
+          });
+      
+          // wait_and_throw() remains the correct way to block until all previously
+          // submitted tasks in the queue (including the data transfer) are complete.
+          b.sycl_q.wait_and_throw();
         }
+
+
+
+
+
+
+
+
+
 
         // Lecture des données en sortie
         uint total_cluster_count = 0;
@@ -1909,6 +2086,7 @@ namespace traccc {
           } else {
               // Force selection of a device by name.
               std::string devName = device.get_info<sycl::info::device::name>();
+              log(devName);
               if (devName.find(MUST_RUN_ON_DEVICE_NAME) != std::string::npos) {
                   log("Right device found: " + devName);
                   return 150; // Return a high score to ensure it's picked
@@ -1916,6 +2094,7 @@ namespace traccc {
               return -1; // Reject all other devices
           }
         };
+        // "Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz"
 
 
         // custom_device_selector d_selector;
@@ -2002,8 +2181,21 @@ namespace traccc {
 
         // Je laisse tous les champs pour que ça reste compatible avec ce qui existe déjà
         write_file 
+        << "Nouveau fichier de bench 2025." << "\n";
+        write_file << "Mode: ";
+        switch(mode)
+        {
+          case shared_USM: write_file << "shared_USM"; break;
+          case device_USM: write_file << "device_USM"; break;
+          case host_USM: write_file << "host_USM"; break;
+          case accessors: write_file << "accessors"; break;
+          case glibc: write_file << "glibc"; break;
+          default: break;
+        }
+        write_file << std::endl;
         
         
+        write_file 
         << DATASET_NUMBER << " "
         << in_total_size << " " // INPUT_DATA_SIZE
         << out_total_size << " " // OUTPUT_DATA_SIZE
@@ -2049,6 +2241,8 @@ namespace traccc {
             traccc_chrono_results cres;
 
             cres = traccc_bench(mode, mstrat);
+
+            write_file << "Iteration(" << rpt << "):\n";
 
             write_file
             << cres.t_alloc_native << " "

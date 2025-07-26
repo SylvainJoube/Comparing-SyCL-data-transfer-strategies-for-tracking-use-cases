@@ -20,7 +20,7 @@ extern int ACAT_REPEAT_LOAD_COUNT ;
 #define DATA_TYPE unsigned int // TODO : try with unsigned int
 using data_type = DATA_TYPE;
 //using data_type_sum = unsigned long long;
-enum sycl_mode {shared_USM, device_USM, host_USM, accessors, glibc};
+enum sycl_mode {shared_USM, device_USM, host_USM, accessors, glibc, kiwaku};
 //enum dataset_type {implicit_USM, device_USM, host_USM, accessors};
 
 extern unsigned long long PARALLEL_FOR_SIZE;// = 1024 * 32 * 8;// = M ; work items number

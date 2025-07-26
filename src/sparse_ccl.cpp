@@ -20,7 +20,8 @@
 #include "traccc_fcts.h"
 //#include "bench_mems.hh"
 
-// icpx sparse_ccl.cpp -o sparseccl -fsycl -O3 -std=c++20 -Wall -Wextra
+// clear && icpx sparse_ccl.cpp constants.cc progress.cc utils.cc -o sparseccl -fsycl -O3 -std=c++20 -Wall -Wextra -I/home/data_sync/academique/These/kiwaku_2025-06/include -I/home/data_sync/academique/These/dependencies/raberu/include -I/home/data_sync/academique/These/dependencies/kumi/include -I/home/data_sync/academique/These/dependencies/eve_tag2023/include
+// ./sparseccl "no_device" 10 1
 
 int main(int argc, char *argv[])
 {
@@ -39,8 +40,11 @@ int main(int argc, char *argv[])
     if (argc>3)
      { arg_repeat = atoi(argv[3]) ; }
 
-    selector_list_devices_generic dev_list_select2{device};
-    ::sycl::queue temp_queue2(dev_list_select2, exception_handler);
+    // DEL25
+    // selector_list_devices_generic dev_list_select2{device};
+    // ::sycl::queue temp_queue2(dev_list_select2, exception_handler);
+
+
     runtime_environment.repeat_load_count = load_count;
     base_traccc_repeat_load_count = runtime_environment.repeat_load_count;
     log("device score: " + std::to_string(device));

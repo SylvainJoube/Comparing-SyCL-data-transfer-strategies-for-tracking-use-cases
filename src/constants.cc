@@ -25,7 +25,7 @@ int REPEAT_COUNT_ONLY_PARALLEL; // défini dans le main (0)
 // les évènements réalisés en lazy.
 int REPEAT_COUNT_ONLY_PARALLEL_WARMUP_COUNT = 0; // 4 défini dans le main (0)
 
-const bool FORCE_EXECUTION_ON_NAMED_DEVICE = true; // go const ?
+const bool FORCE_EXECUTION_ON_NAMED_DEVICE = false; // go const ?
 std::string MUST_RUN_ON_DEVICE_NAME = "<unknown device>"; //"Intel(R) UHD Graphics 620 [0x5917]"; //std::string("s");
 
 // How many times the sum should be repeated
