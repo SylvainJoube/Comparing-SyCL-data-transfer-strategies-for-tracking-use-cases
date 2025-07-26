@@ -20,6 +20,8 @@
 #include "traccc_fcts.h"
 //#include "bench_mems.hh"
 
+// icpx sparse_ccl.cpp -o sparseccl -fsycl -O3 -std=c++20 -Wall -Wextra
+
 int main(int argc, char *argv[])
 {
 
