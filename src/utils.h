@@ -34,7 +34,7 @@ void press_enter_to_continue() ;
 
 // SyCL asynchronous exception handler
 // Create an exception handler for asynchronous SYCL exceptions
-static auto exception_handler = [](cl::sycl::exception_list e_list) {
+static auto exception_handler = [](::sycl::exception_list e_list) {
   for (std::exception_ptr const &e : e_list) {
     try {
       std::rethrow_exception(e);
@@ -122,8 +122,8 @@ struct host_dataset {
     data_type *device_output = nullptr;
     // Buffers on the device for accessors-buffers
     // Those are pointers to be created during the allocation phase
-    cl::sycl::buffer<data_type, 1> *buffer_input = nullptr;
-    cl::sycl::buffer<data_type, 1> *buffer_output = nullptr;
+    ::sycl::buffer<data_type, 1> *buffer_input = nullptr;
+    ::sycl::buffer<data_type, 1> *buffer_output = nullptr;
 };
 
 extern unsigned int global_t_data_generation_and_ram_allocation ;
@@ -208,17 +208,17 @@ static bool only_show_once_right_device_found_has_been_found = false;
 //  * present on a system. This example looks for a device with SPIR support
 //  * and prefers GPUs over CPUs. */
 // // Selects the device named MUST_RUN_ON_DEVICE_NAME.
-// class custom_device_selector : public cl::sycl::device_selector {
+// class custom_device_selector : public ::sycl::device_selector {
 // private:
-//     cl::sycl::default_selector def_selector;
+//     ::sycl::default_selector def_selector;
 // public:
-//     custom_device_selector() : cl::sycl::device_selector() {}
+//     custom_device_selector() : ::sycl::device_selector() {}
 
 //     /* The selection is performed via the () operator in the base
 //     * selector class.This method will be called once per device in each
 //     * platform. Note that all platforms are evaluated whenever there is
 //     * a device selection. */
-//     int operator()(const cl::sycl::device& device) const override {
+//     int operator()(const ::sycl::device& device) const override {
         
 //         if ( ! FORCE_EXECUTION_ON_NAMED_DEVICE ) {
 //             // Use the default recommended device
@@ -228,7 +228,7 @@ static bool only_show_once_right_device_found_has_been_found = false;
 //             // Multiple devices may have the same name but not the same score
 //             // so I return the device score if it has the right name
 //             // and -1 (i.e. never choose this one) otherwise.
-//             std::string devName =  device.get_info<cl::sycl::info::device::name>();
+//             std::string devName =  device.get_info<::sycl::info::device::name>();
 //             if (devName.compare(MUST_RUN_ON_DEVICE_NAME) == 0) {
 //                 int devScore = def_selector(device);
 //                 if ( ! only_show_once_right_device_found_has_been_found) {
@@ -269,16 +269,16 @@ static bool only_show_once_right_device_found_has_been_found = false;
 
 // Generic device selector that asks the user to choose on which device to
 // run the benchmark.
-class selector_list_devices_generic : public cl::sycl::device_selector {
+class selector_list_devices_generic : public ::sycl::device_selector {
 private:
-    cl::sycl::default_selector def_selector;
+    ::sycl::default_selector def_selector;
     // print_devices=true  => 1) print devices and asks the user to pick a score
     // print_devices=false => 2) silently selects the desired device for running the benchmark
     bool print_devices    = true;
     int  choosen_score;
 public:
-    selector_list_devices_generic() : cl::sycl::device_selector() {}
-    selector_list_devices_generic(int _choosen_score) : cl::sycl::device_selector(), choosen_score(_choosen_score) {
+    selector_list_devices_generic() : ::sycl::device_selector() {}
+    selector_list_devices_generic(int _choosen_score) : ::sycl::device_selector(), choosen_score(_choosen_score) {
         log("choosen score : " + std::to_string(choosen_score));
         print_devices = false;
     }
@@ -287,17 +287,17 @@ public:
     * selector class.This method will be called once per device in each
     * platform. Note that all platforms are evaluated whenever there is
     * a device selection. */
-    int operator()(const cl::sycl::device& device) const override {
+    int operator()(const ::sycl::device& device) const override {
         
         // List device names and return the default score for the device
-        std::string devName =  device.get_info<cl::sycl::info::device::name>();
+        std::string devName =  device.get_info<::sycl::info::device::name>();
         if (print_devices) logs(devName);
 
         std::string devType = "";
-        switch (device.get_info<cl::sycl::info::device::device_type>()) {
-        case cl::sycl::info::device_type::cpu :  devType = "cpu"; break;
-        case cl::sycl::info::device_type::gpu :  devType = "gpu"; break;
-        case cl::sycl::info::device_type::host : devType = "host"; break;
+        switch (device.get_info<::sycl::info::device::device_type>()) {
+        case ::sycl::info::device_type::cpu :  devType = "cpu"; break;
+        case ::sycl::info::device_type::gpu :  devType = "gpu"; break;
+        case ::sycl::info::device_type::host : devType = "host"; break;
         default : devType = "unknown type"; break;
         }
         if (print_devices) logs(" (" + devType + ")");

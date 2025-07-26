@@ -13,7 +13,7 @@
 #include <string>
 
 // SyCL specific includes
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 #include <array>
 #include <sys/time.h>
 #include <stdlib.h>
@@ -90,10 +90,10 @@ public :
         return s;
     }
 
-    DATA_TYPE* alloc(uint mem_type, cl::sycl::queue sycl_q) {
+    DATA_TYPE* alloc(uint mem_type, ::sycl::queue sycl_q) {
         switch (mem_type) {
         case 1: return new DATA_TYPE[ecount]; // glibc
-        case 2: return static_cast<data_type *> (cl::sycl::malloc_host(INPUT_DATA_SIZE, sycl_q)); // sycl
+        case 2: return static_cast<data_type *> (::sycl::malloc_host(INPUT_DATA_SIZE, sycl_q)); // sycl
         default : return nullptr;
         }
     }
@@ -104,10 +104,10 @@ public :
         }
     }
 
-    void freemem(uint mem_type, DATA_TYPE* mem, cl::sycl::queue sycl_q) {
+    void freemem(uint mem_type, DATA_TYPE* mem, ::sycl::queue sycl_q) {
         switch (mem_type) {
         case 1: delete[] mem; break; // glibc
-        case 2: cl::sycl::free(mem, sycl_q); sycl_q.wait_and_throw(); break; // sycl
+        case 2: ::sycl::free(mem, sycl_q); sycl_q.wait_and_throw(); break; // sycl
         default : break;
         }
     }
@@ -121,7 +121,7 @@ public :
         t_free_dest.init();
     }
 
-    void run(uint mem_type_src, uint mem_type_dest, uint cpy_type, cl::sycl::queue sycl_q) {
+    void run(uint mem_type_src, uint mem_type_dest, uint cpy_type, ::sycl::queue sycl_q) {
 
         /*log("run src" + std::to_string(mem_type_src) + " - dest" + std::to_string(mem_type_src)
             + " - ecount" + std::to_string(ecount)
@@ -161,7 +161,7 @@ public :
 
     }
 
-    void multiple_runs(uint mem_type_src, uint mem_type_dest, uint cpy_type, cl::sycl::queue sycl_q) {
+    void multiple_runs(uint mem_type_src, uint mem_type_dest, uint cpy_type, ::sycl::queue sycl_q) {
 
         init_timers();
 
@@ -189,7 +189,7 @@ public :
         
         try {
             
-            cl::sycl::queue sycl_q(d_selector, exception_handler);
+            ::sycl::queue sycl_q(d_selector, exception_handler);
             sycl_q.wait_and_throw();
 
             logs("glibc -> glibc (copie glibc)");
@@ -213,7 +213,7 @@ public :
             logs("sycl -> glibc : (copie sycl)");
             multiple_runs(2, 1, 2, sycl_q);
 
-        } catch (cl::sycl::exception const &e) {
+        } catch (::sycl::exception const &e) {
             std::cout << "An exception has been caught while processing SyCL code.\n";
             std::terminate();
         }
@@ -223,7 +223,7 @@ public :
 
 // SyCL asynchronous exception handler
 // Create an exception handler for asynchronous SYCL exceptions
-static auto r_exception_handler = [](cl::sycl::exception_list e_list) {
+static auto r_exception_handler = [](::sycl::exception_list e_list) {
     for (std::exception_ptr const &e : e_list) {
         try {
             std::rethrow_exception(e);
@@ -316,8 +316,8 @@ public:
     data_type* COMPUTE_INPUT;
     data_type* COMPUTE_OUTPUT;
 
-    cl::sycl::buffer<data_type, 1> *BUFFER_INPUT  = nullptr;
-    cl::sycl::buffer<data_type, 1> *BUFFER_OUTPUT = nullptr;
+    ::sycl::buffer<data_type, 1> *BUFFER_INPUT  = nullptr;
+    ::sycl::buffer<data_type, 1> *BUFFER_OUTPUT = nullptr;
 
     data_type expected_sum;
 
@@ -361,7 +361,7 @@ public:
     // Etape 1 : allocation de la mémoire SYCL / stdlib
     // mémoires à tester SYCL host/shared/device
     // et aussi CPU-only pour comparer (buffer stdlib host).
-    void step1(cl::sycl::queue& sycl_q) {
+    void step1(::sycl::queue& sycl_q) {
         switch (MEM_TYPE) {
             case STDL:
                 COMPUTE_INPUT  = new data_type[INPUT_INT_COUNT];
@@ -371,25 +371,25 @@ public:
             case SYCL_ACCESSORS:
                 COMPUTE_INPUT  = new data_type[INPUT_INT_COUNT];
                 COMPUTE_OUTPUT = new data_type[OUTPUT_INT_COUNT];
-                BUFFER_INPUT   = new cl::sycl::buffer<data_type, 1>(COMPUTE_INPUT, cl::sycl::range<1>(INPUT_INT_COUNT));
-                BUFFER_OUTPUT  = new cl::sycl::buffer<data_type, 1>(COMPUTE_OUTPUT, cl::sycl::range<1>(OUTPUT_INT_COUNT));
+                BUFFER_INPUT   = new ::sycl::buffer<data_type, 1>(COMPUTE_INPUT, ::sycl::range<1>(INPUT_INT_COUNT));
+                BUFFER_OUTPUT  = new ::sycl::buffer<data_type, 1>(COMPUTE_OUTPUT, ::sycl::range<1>(OUTPUT_INT_COUNT));
                 break;
 
             case SYCL_HOST:
-                COMPUTE_INPUT  = cl::sycl::malloc_host<data_type>(INPUT_INT_COUNT, sycl_q);
-                COMPUTE_OUTPUT = cl::sycl::malloc_host<data_type>(OUTPUT_INT_COUNT, sycl_q);
+                COMPUTE_INPUT  = ::sycl::malloc_host<data_type>(INPUT_INT_COUNT, sycl_q);
+                COMPUTE_OUTPUT = ::sycl::malloc_host<data_type>(OUTPUT_INT_COUNT, sycl_q);
                 log("SYCL host allocated :  INPUT_INT_COUNT=" + std::to_string(INPUT_INT_COUNT));
                 log("SYCL host allocated : OUTPUT_INT_COUNT=" + std::to_string(OUTPUT_INT_COUNT));
                 break;
 
             case SYCL_SHARED:
-                COMPUTE_INPUT  = cl::sycl::malloc_shared<data_type>(INPUT_INT_COUNT, sycl_q);
-                COMPUTE_OUTPUT = cl::sycl::malloc_shared<data_type>(OUTPUT_INT_COUNT, sycl_q);
+                COMPUTE_INPUT  = ::sycl::malloc_shared<data_type>(INPUT_INT_COUNT, sycl_q);
+                COMPUTE_OUTPUT = ::sycl::malloc_shared<data_type>(OUTPUT_INT_COUNT, sycl_q);
                 break;
 
             case SYCL_DEVICE:
-                COMPUTE_INPUT  = cl::sycl::malloc_device<data_type>(INPUT_INT_COUNT, sycl_q);
-                COMPUTE_OUTPUT = cl::sycl::malloc_device<data_type>(OUTPUT_INT_COUNT, sycl_q);
+                COMPUTE_INPUT  = ::sycl::malloc_device<data_type>(INPUT_INT_COUNT, sycl_q);
+                COMPUTE_OUTPUT = ::sycl::malloc_device<data_type>(OUTPUT_INT_COUNT, sycl_q);
                 break;
 
             case UNKNOWN:
@@ -401,7 +401,7 @@ public:
     }
 
     // Etape 2 : copie (explicite) de la mémoire host vers la mémoire de l'étape 1.
-    void step2(cl::sycl::queue& sycl_q) {
+    void step2(::sycl::queue& sycl_q) {
         if ( (MEM_TYPE == SYCL_HOST) || (MEM_TYPE == SYCL_DEVICE) || (MEM_TYPE == SYCL_SHARED) ) {
             sycl_q.memcpy(COMPUTE_INPUT, HOST_INPUT, INPUT_INT_COUNT * sizeof(data_type)).wait();
             log("SYCL host done memcpy.");
@@ -413,7 +413,7 @@ public:
     }
 
     // Etape 3 : sommes partielles device / CPU
-    void step3(cl::sycl::queue& sycl_q) {
+    void step3(::sycl::queue& sycl_q) {
 
         if ( (MEM_TYPE == SYCL_HOST) || (MEM_TYPE == SYCL_DEVICE) || (MEM_TYPE == SYCL_SHARED) ) {
             
@@ -423,7 +423,7 @@ public:
             const auto INPUT_OUTPUT_FACTOR_CST = INPUT_OUTPUT_FACTOR;
             const auto OUTPUT_INT_COUNT_CST    = OUTPUT_INT_COUNT;
 
-            sycl_q.parallel_for<class some_kernel>(cl::sycl::range<1>(OUTPUT_INT_COUNT_CST), [=](cl::sycl::id<1> chunk_index) {
+            sycl_q.parallel_for<class some_kernel>(::sycl::range<1>(OUTPUT_INT_COUNT_CST), [=](::sycl::id<1> chunk_index) {
                 auto cindex = chunk_index.get(0);
                 data_type partial_sum = 0;
 
@@ -441,8 +441,8 @@ public:
         
         if ( MEM_TYPE == SYCL_ACCESSORS ) {
             
-            cl::sycl::buffer<data_type, 1> *buffer_input  = BUFFER_INPUT;
-            cl::sycl::buffer<data_type, 1> *buffer_output = BUFFER_OUTPUT;
+            ::sycl::buffer<data_type, 1> *buffer_input  = BUFFER_INPUT;
+            ::sycl::buffer<data_type, 1> *buffer_output = BUFFER_OUTPUT;
             
             // data_type* cp_input  = COMPUTE_INPUT;
             // data_type* cp_output = COMPUTE_OUTPUT;
@@ -451,13 +451,13 @@ public:
             const auto OUTPUT_INT_COUNT_CST    = OUTPUT_INT_COUNT;
 
 
-            sycl_q.submit([&](cl::sycl::handler &h) {
+            sycl_q.submit([&](::sycl::handler &h) {
 
                 // Initialisation via le constructeur des accesseurs
-                cl::sycl::accessor a_input(*buffer_input, h, cl::sycl::read_only);
-                cl::sycl::accessor a_output(*buffer_output, h, cl::sycl::write_only, cl::sycl::no_init); // no_init non supporté par hipsycl visiblement
+                ::sycl::accessor a_input(*buffer_input, h, ::sycl::read_only);
+                ::sycl::accessor a_output(*buffer_output, h, ::sycl::write_only, ::sycl::no_init); // no_init non supporté par hipsycl visiblement
 
-                h.parallel_for<class MyKernel_abc>(cl::sycl::range<1>(OUTPUT_INT_COUNT_CST), [=](cl::sycl::id<1> chunk_index) {
+                h.parallel_for<class MyKernel_abc>(::sycl::range<1>(OUTPUT_INT_COUNT_CST), [=](::sycl::id<1> chunk_index) {
                     auto cindex = chunk_index.get(0);
                     data_type partial_sum = 0;
 
@@ -492,7 +492,7 @@ public:
     }
 
     // Etape 4 : copie (explicite) vers la mémoire stdlib host
-    void step4(cl::sycl::queue& sycl_q) {
+    void step4(::sycl::queue& sycl_q) {
         if ( (MEM_TYPE == SYCL_HOST) || (MEM_TYPE == SYCL_DEVICE) || (MEM_TYPE == SYCL_SHARED) ) {
             sycl_q.memcpy(HOST_OUTPUT, COMPUTE_OUTPUT, OUTPUT_INT_COUNT * sizeof(data_type)).wait();
         }
@@ -501,17 +501,17 @@ public:
         }
 
         if ( MEM_TYPE == SYCL_ACCESSORS ) {
-            (*BUFFER_OUTPUT).get_access<cl::sycl::access::mode::read>();
+            (*BUFFER_OUTPUT).get_access<::sycl::access::mode::read>();
         }
     }
 
 
 
     // Etape 5 : libération de la mémoire de l'étape 1
-    void step5(cl::sycl::queue& sycl_q) {
+    void step5(::sycl::queue& sycl_q) {
         if ( (MEM_TYPE == SYCL_HOST) || (MEM_TYPE == SYCL_DEVICE) || (MEM_TYPE == SYCL_SHARED) ) {
-            cl::sycl::free(COMPUTE_INPUT,  sycl_q);
-            cl::sycl::free(COMPUTE_OUTPUT, sycl_q);
+            ::sycl::free(COMPUTE_INPUT,  sycl_q);
+            ::sycl::free(COMPUTE_OUTPUT, sycl_q);
             sycl_q.wait_and_throw();
         }
         if ( MEM_TYPE == STDL ) {
@@ -546,9 +546,9 @@ public:
 
         try {
             // The default device selector will select the most performant device.
-            //cl::sycl::default_selector d_selector;
-            cl::sycl::default_selector d_selector;
-            cl::sycl::queue sycl_q(d_selector, exception_handler);
+            //::sycl::default_selector d_selector;
+            ::sycl::default_selector d_selector;
+            ::sycl::queue sycl_q(d_selector, exception_handler);
             sycl_q.wait_and_throw();
 
             
@@ -630,7 +630,7 @@ public:
             // - tester push Attila
             // - 
 
-        } catch (cl::sycl::exception const &e) {
+        } catch (::sycl::exception const &e) {
             std::cout << "SYCL HELLOWORLD ERROR : An exception has been caught while processing SyCL code.\n";
         }
 

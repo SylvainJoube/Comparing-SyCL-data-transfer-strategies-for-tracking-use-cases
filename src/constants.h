@@ -6,7 +6,7 @@
 #include <chrono>
 
 // SyCL specific includes
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 #include <array>
 #include <sys/time.h>
 #include <stdlib.h>

@@ -1,10 +1,10 @@
 #pragma once
 
 // SyCL specific includes
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 
 inline namespace cl {
     namespace sycl {
-        constexpr property::noinit no_init = cl::sycl::noinit;
+        constexpr property::noinit no_init = ::sycl::noinit;
     };
 };

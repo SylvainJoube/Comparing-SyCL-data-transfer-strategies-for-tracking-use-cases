@@ -12,7 +12,7 @@
 #include <string>
 
 // SyCL specific includes
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 #include <array>
 #include <sys/time.h>
 #include <stdlib.h>
@@ -104,15 +104,15 @@ namespace ubench_v2 {
         data_type * sycl_output = nullptr;
 
         // Accessors/buffers
-        cl::sycl::buffer<data_type, 1> * buffer_input  = nullptr;
-        cl::sycl::buffer<data_type, 1> * buffer_output = nullptr;
+        ::sycl::buffer<data_type, 1> * buffer_input  = nullptr;
+        ::sycl::buffer<data_type, 1> * buffer_output = nullptr;
 
         data_type expected_sum; // calculée une fois, sur CPU
 
         sycl_mode mode;
         bool explicit_copy = false;
 
-        cl::sycl::queue sycl_q;
+        ::sycl::queue sycl_q;
         //mem_strategy mstrat;// = flatten;
 
         traccc_chrono_results c;
@@ -178,38 +178,38 @@ namespace ubench_v2 {
             memset(b.native_output, 1, b_OUTPUT_DATA_LENGTH * sizeof(data_type));
             b.c.t_alloc_native = chrono.reset();
             if (!b.native_input)
-             { throw cl::sycl::exception(cl::sycl::errc::memory_allocation,"native input new failure") ; } 
+             { throw ::sycl::exception(::sycl::errc::memory_allocation,"native input new failure") ; } 
             if (!b.native_output)
-             { throw cl::sycl::exception(cl::sycl::errc::memory_allocation,"native output new failure") ; } 
+             { throw ::sycl::exception(::sycl::errc::memory_allocation,"native output new failure") ; } 
         }
 
         switch(b.mode) {
         case shared_USM:
-            b.sycl_input  = cl::sycl::malloc_shared<data_type>(b_INPUT_DATA_LENGTH,  b.sycl_q);
-            b.sycl_output = cl::sycl::malloc_shared<data_type>(b_OUTPUT_DATA_LENGTH, b.sycl_q);
+            b.sycl_input  = ::sycl::malloc_shared<data_type>(b_INPUT_DATA_LENGTH,  b.sycl_q);
+            b.sycl_output = ::sycl::malloc_shared<data_type>(b_OUTPUT_DATA_LENGTH, b.sycl_q);
             b.sycl_q.wait_and_throw();
             b.c.t_alloc_sycl = chrono.reset();
             break;
         
         case host_USM:
-            b.sycl_input  = cl::sycl::malloc_host<data_type>(b_INPUT_DATA_LENGTH,  b.sycl_q);
-            b.sycl_output = cl::sycl::malloc_host<data_type>(b_OUTPUT_DATA_LENGTH, b.sycl_q);
+            b.sycl_input  = ::sycl::malloc_host<data_type>(b_INPUT_DATA_LENGTH,  b.sycl_q);
+            b.sycl_output = ::sycl::malloc_host<data_type>(b_OUTPUT_DATA_LENGTH, b.sycl_q);
             b.sycl_q.wait_and_throw();
             b.c.t_alloc_sycl = chrono.reset();
             break;
 
         case device_USM:
             // Alloc native + sycl
-            b.sycl_input  = cl::sycl::malloc_device<data_type>(b_INPUT_DATA_LENGTH,  b.sycl_q);
-            b.sycl_output = cl::sycl::malloc_device<data_type>(b_OUTPUT_DATA_LENGTH, b.sycl_q);
+            b.sycl_input  = ::sycl::malloc_device<data_type>(b_INPUT_DATA_LENGTH,  b.sycl_q);
+            b.sycl_output = ::sycl::malloc_device<data_type>(b_OUTPUT_DATA_LENGTH, b.sycl_q);
             b.sycl_q.wait_and_throw();
             b.c.t_alloc_sycl = chrono.reset();
             break;
 
         case accessors:
             // Alloc native + sycl
-            b.buffer_input  = new cl::sycl::buffer<data_type, 1> (b.native_input,   cl::sycl::range<1>(b_INPUT_DATA_LENGTH));
-            b.buffer_output = new cl::sycl::buffer<data_type, 1> (b.native_output,  cl::sycl::range<1>(b_OUTPUT_DATA_LENGTH));
+            b.buffer_input  = new ::sycl::buffer<data_type, 1> (b.native_input,   ::sycl::range<1>(b_INPUT_DATA_LENGTH));
+            b.buffer_output = new ::sycl::buffer<data_type, 1> (b.native_output,  ::sycl::range<1>(b_OUTPUT_DATA_LENGTH));
             b.sycl_q.wait_and_throw();
             b.c.t_alloc_sycl = chrono.reset();
             break;
@@ -219,9 +219,9 @@ namespace ubench_v2 {
         }
         if (is_using_usm(b)) {
           if (!b.sycl_input)
-           { throw cl::sycl::exception(cl::sycl::errc::memory_allocation,"sycl input malloc failure") ; } 
+           { throw ::sycl::exception(::sycl::errc::memory_allocation,"sycl input malloc failure") ; } 
           if (!b.sycl_output)
-           { throw cl::sycl::exception(cl::sycl::errc::memory_allocation,"sycl output malloc failure") ; }
+           { throw ::sycl::exception(::sycl::errc::memory_allocation,"sycl output malloc failure") ; }
         }
 
     }
@@ -248,8 +248,8 @@ namespace ubench_v2 {
         }
 
         if (is_using_usm(b)) {
-            cl::sycl::free(b.sycl_input,  b.sycl_q);
-            cl::sycl::free(b.sycl_output, b.sycl_q);
+            ::sycl::free(b.sycl_input,  b.sycl_q);
+            ::sycl::free(b.sycl_output, b.sycl_q);
             b.sycl_input  = nullptr;
             b.sycl_output = nullptr;
             b.sycl_q.wait_and_throw();
@@ -312,7 +312,7 @@ data_type g_expected_sum;
             data_type * s_input = b.sycl_input;;
             data_type * s_output = b.sycl_output;
         
-            auto e = b.sycl_q.parallel_for<class MyKernel_bx>(cl::sycl::range<1>(pfsize), [=](cl::sycl::id<1> chunk_index) {
+            auto e = b.sycl_q.parallel_for<class MyKernel_bx>(::sycl::range<1>(pfsize), [=](::sycl::id<1> chunk_index) {
                 int cindex = chunk_index[0];
                 data_type sum = 0;
 
@@ -344,14 +344,14 @@ data_type g_expected_sum;
 
         // accessors
         if ( b.mode == sycl_mode::accessors ) {
-            cl::sycl::buffer<data_type, 1> *b_input   = b.buffer_input;  // wraps b.native_input
-            cl::sycl::buffer<data_type, 1> *b_output  = b.buffer_output; // wraps b.native_output
+            ::sycl::buffer<data_type, 1> *b_input   = b.buffer_input;  // wraps b.native_input
+            ::sycl::buffer<data_type, 1> *b_output  = b.buffer_output; // wraps b.native_output
 
-            b.sycl_q.submit([&](cl::sycl::handler &h) {
-                cl::sycl::accessor a_input (*b_input,  h, cl::sycl::read_only);
-                cl::sycl::accessor a_output(*b_output, h, cl::sycl::write_only, cl::sycl::no_init);
+            b.sycl_q.submit([&](::sycl::handler &h) {
+                ::sycl::accessor a_input (*b_input,  h, ::sycl::read_only);
+                ::sycl::accessor a_output(*b_output, h, ::sycl::write_only, ::sycl::no_init);
 
-                h.parallel_for<class MyKernel_bz>(cl::sycl::range<1>(pfsize), [=](cl::sycl::id<1> chunk_index) {
+                h.parallel_for<class MyKernel_bz>(::sycl::range<1>(pfsize), [=](::sycl::id<1> chunk_index) {
                     int cindex = chunk_index[0];
                     data_type sum = 0;
 
@@ -379,7 +379,7 @@ data_type g_expected_sum;
         chrono.start();
 
         if ( b.mode == sycl_mode::accessors ) {
-            (*b.buffer_output).get_access<cl::sycl::access::mode::read>();
+            (*b.buffer_output).get_access<::sycl::access::mode::read>();
             b.sycl_q.wait_and_throw();
         }
 
@@ -416,7 +416,7 @@ data_type g_expected_sum;
         custom_device_selector d_selector;
         try {
             //chrono.reset(); //t_start = get_ms();
-            cl::sycl::queue sycl_q(d_selector, exception_handler);
+            ::sycl::queue sycl_q(d_selector, exception_handler);
             sycl_q.wait_and_throw();
 
             bench_variables bench;
@@ -441,7 +441,7 @@ data_type g_expected_sum;
 
             return bench.c; // résultats chronométrés            
             
-        } catch (cl::sycl::exception const &e) {
+        } catch (::sycl::exception const &e) {
             std::cout << "An exception has been caught while processing SyCL code: "<<e.what()<<"\n";
             std::terminate();
         }

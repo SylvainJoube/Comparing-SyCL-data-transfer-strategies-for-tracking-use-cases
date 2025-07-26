@@ -9,7 +9,7 @@
 #include <string>
 
 // SyCL specific includes
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 #include <array>
 #include <sys/time.h>
 #include <stdlib.h>
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
      { arg_repeat = atoi(argv[3]) ; }
 
     selector_list_devices_generic dev_list_select2{arg_score};
-    cl::sycl::queue temp_queue2(dev_list_select2, exception_handler);
+    ::sycl::queue temp_queue2(dev_list_select2, exception_handler);
     log("device score: " + std::to_string(arg_score));
     log("data size: " + std::to_string(arg_gb) + "Gb");
     log("recompute: " + std::to_string(arg_repeat) + " times");
