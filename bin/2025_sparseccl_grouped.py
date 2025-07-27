@@ -10,6 +10,9 @@ import statistics as stat
 
 ## ============ CHARGEMENT ============
 
+# CPU, SYCL
+BENCH_TYPE="CPU"
+
 #FLAT_ARRAYS = False
 FLAT_ONLY = True
 tableau_horizontal = True # vertical pas encore géré
@@ -17,7 +20,8 @@ tableau_horizontal = True # vertical pas encore géré
 VERSION_ATTENDUE = 108
 CHECK_VERSION = False
 
-computer_name = "cassidi" # aussi utilisé pour le nom du fichier d'entrée
+# computer_name = "cassidi" # aussi utilisé pour le nom du fichier d'entrée
+computer_name = ""
 
 # TODO affichage de la figure 4 et 3
 # Il faut charger deux fichiers, un flatten et l'autre graphPtr.
@@ -72,6 +76,9 @@ def usm_code_to_str(usm_code):
     if (usm_code == 2): return "host"
     if (usm_code == 3): return "accessors"
     if (usm_code == 20): return "CPU"
+    if (usm_code == 50): return "Kiwaku_cpu"
+    if (usm_code == 51): return "Kiwaku_simd"
+    if (usm_code == 52): return "Kiwaku_sycl"
     return "<unknown>"
 
 # Tous les headers : a chaque header est associé une série de paramètres
@@ -183,29 +190,12 @@ def load_file(filename, isFlatten, multiplyFactor):
     # with file fermé
     # print(" ________ FNALLY :  global_kernel_count = " + str(global_kernel_count))
 
-#print("header_list:")
-#print(header_list)
-
-# Chargement des résultats en flatten
-# load_file('acts06_generalFlatten_blopNvidia_AT_ld100_RUN1.t', True)
-#load_file('sandor_2022-02-09/acts06_generalFlatten_sandor_AT_ld100_RUN5_malloc_device_fix.t', True, 1)
-#load_file('sandor_2022-02-09/acts06_generalFlatten_sandor_AT_ld100_RUN2.t', True, 1)
-
-# Marchait avec ces 2 fichiers : (mêmes résultats que pour le papier)
-# load_file('sccl107_generalFlatten_sandor_AT_ld100_RUN1.t', True, 1) # <- papier
-# load_file('sccl107_generalGraphPtr_uniqueModules_sandor_AT_ld10_RUN1.t', False, 1) # <- papier
 
 
-
-# load_file('sccl108_generalFlatten_sandor_AT_ld100_RUN3.t', True, 1)
-# load_file('sccl107_generalFlatten_sandor_AT_ld100_RUN1.t', True, 1) # <- papier
-
-
-# décommenté par défaut :
-# load_file('sccl108_generalGraphPtr_uniqueModules_sandor_AT_ld100_RUN3.t', False, 1)
-
-load_file("sccl108_generalFlatten_" + computer_name + "_AT_ld10_RUN1.t", True, 1)
-load_file("sccl108_generalGraphPtr_uniqueModules_" + computer_name + "_AT_ld10_RUN1.t", False, 1)
+load_file("sparseccl108_generalFlatten__ld10_RUUUUUN1_.t", True, 1)
+load_file("sparseccl108_generalGraphPtr_uniqueModules__ld10_RUUUUUN1_.t", False, 1)
+# load_file("sparseccl108_generalFlatten_" + computer_name + "_ld10_RUUUUUN1.t", True, 1)
+# load_file("sparseccl108_generalGraphPtr_uniqueModules_" + computer_name + "_ld10_RUUUUUN1.t", False, 1)
 
 
 # load_file('sccl107_generalFlatten_sandor_AT_ld100_RUN1.t', True, 1)
@@ -266,6 +256,18 @@ x_list_acc = []
 y_list_acc = []
 y_median_acc = []
 
+x_list_kwk_cpu = []
+y_list_kwk_cpu = []
+y_median_kwk_cpu = []
+
+x_list_kwk_simd = []
+y_list_kwk_simd = []
+y_median_kwk_simd = []
+
+x_list_kwk_sycl = []
+y_list_kwk_sycl = []
+y_median_kwk_sycl = []
+
 x_list_curve_drawn = []
 x_list_curve_drawn.append("alloc")
 x_list_curve_drawn.append("fill")
@@ -322,8 +324,28 @@ for header in header_list:
             y_list = y_list_glibc_flat
             y_median = y_median_glibc_flat
             found = True
-        
         # osef glibc (20)
+        
+        # Kiwaku CPU
+        if header["sycl_mode"] == 50:
+            x_list = x_list_kwk_cpu
+            y_list = y_list_kwk_cpu
+            y_median = y_median_kwk_cpu
+            found = True
+
+        # Kiwaku SIMD
+        if header["sycl_mode"] == 51:
+            x_list = x_list_kwk_simd
+            y_list = y_list_kwk_simd
+            y_median = y_median_kwk_simd
+            found = True
+
+        # Kiwaku SYCL
+        if header["sycl_mode"] == 52:
+            x_list = x_list_kwk_sycl
+            y_list = y_list_kwk_sycl
+            y_median = y_median_kwk_sycl
+            found = True
         
     else: # IS_FLATTEN = False
 
@@ -404,6 +426,10 @@ for header in header_list:
         # y_median.append(stat.median(y_list[1]))
         # y_median.append(stat.median(y_list[2]))
         # y_median.append(stat.median(y_list[3]))
+    else:
+        print("!!!ERROR - HEADER NOT FOUND!!!")
+        print("!!!ERROR - HEADER NOT FOUND!!!")
+        print("!!!ERROR - HEADER NOT FOUND!!!")
 
 
 def draw_violin_plot(name, color, y_list, y_median, linestyle):
@@ -485,26 +511,41 @@ plt.rcParams['grid.color'] = "black" ##cccccc
 plt.grid(linewidth=line_width/2)
 
 
-if FLAT_ONLY:
-    plt.title(computer_name + " - SparseCCL - flat arrays")
+# LINES STYLES
+# https://matplotlib.org/stable/gallery/lines_bars_and_markers/linestyles.html
+
+if BENCH_TYPE == "CPU":
+    plt.title(computer_name + " CPU - SparseCCL - flat arrays")
     draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
     draw_curve("accessors", "maroon", y_list_acc, y_median_acc, "dashed")
-    draw_curve("USM shared", "blue", y_list_shared_flat, y_median_shared_flat, "dotted")
-    # draw_curve("USM host", "red", y_list_host_flat, y_median_host_flat, "dashdot")
-else:
-    plt.title("SparseCCL - pointer graph vs flat arrays")
-    #draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
-    draw_curve("shared flat", "blue", y_list_shared_flat, y_median_shared_flat, "solid")
-    print("len y_list_shared_flat = " + str(len(y_list_shared_flat)))
-    print("len y_median_shared_flat = " + str(len(y_median_shared_flat)))
-    print("len y_list_shared_ptr = " + str(len(y_list_shared_ptr)))
-    print("len y_median_shared_ptr = " + str(len(y_median_shared_ptr)))
+    # draw_curve("USM shared", "red", y_list_shared_flat, y_median_shared_flat, "dotted")
+    draw_curve("Kiwaku CPU", "blue", y_list_kwk_cpu, y_median_kwk_cpu, "dashdot")
+    draw_curve("Kiwaku SIMD", "purple", y_list_kwk_simd, y_median_kwk_simd, (0, (3, 1, 1, 1)))
 
-    print("len y_list_host_ptr = " + str(len(y_list_host_ptr)))
-    print("len y_median_host_ptr = " + str(len(y_median_host_ptr)))
-    draw_curve("shared ptr", "navy", y_list_shared_ptr, y_median_shared_ptr, "dashdot")
-    #draw_curve("host flat", "red", y_list_host_flat, y_median_host_flat, "solid")
-    draw_curve("host ptr", "maroon", y_list_host_ptr, y_median_host_ptr, "dashdot")
+    draw_curve("hand", "red", y_list_glibc_flat, y_median_glibc_flat, "dotted")
+    # draw_curve("USM host", "red", y_list_host_flat, y_median_host_flat, "dashdot")
+
+# if FLAT_ONLY:
+#     plt.title(computer_name + " - SparseCCL - flat arrays")
+#     draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
+#     draw_curve("accessors", "maroon", y_list_acc, y_median_acc, "dashed")
+#     draw_curve("USM shared", "red", y_list_shared_flat, y_median_shared_flat, "dotted")
+#     draw_curve("Kiwaku", "blue", y_list_shared_flat, y_median_shared_flat, "dashdot")
+#     # draw_curve("USM host", "red", y_list_host_flat, y_median_host_flat, "dashdot")
+# else:
+#     plt.title("SparseCCL - pointer graph vs flat arrays")
+#     #draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
+#     draw_curve("shared flat", "blue", y_list_shared_flat, y_median_shared_flat, "solid")
+#     print("len y_list_shared_flat = " + str(len(y_list_shared_flat)))
+#     print("len y_median_shared_flat = " + str(len(y_median_shared_flat)))
+#     print("len y_list_shared_ptr = " + str(len(y_list_shared_ptr)))
+#     print("len y_median_shared_ptr = " + str(len(y_median_shared_ptr)))
+
+#     print("len y_list_host_ptr = " + str(len(y_list_host_ptr)))
+#     print("len y_median_host_ptr = " + str(len(y_median_host_ptr)))
+#     draw_curve("shared ptr", "navy", y_list_shared_ptr, y_median_shared_ptr, "dashdot")
+#     #draw_curve("host flat", "red", y_list_host_flat, y_median_host_flat, "solid")
+#     draw_curve("host ptr", "maroon", y_list_host_ptr, y_median_host_ptr, "dashdot")
 
 
 
