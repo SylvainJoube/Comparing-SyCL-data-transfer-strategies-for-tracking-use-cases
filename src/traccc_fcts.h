@@ -18,6 +18,7 @@
 #include "utils.h"
 #include "progress.h"
 #include "constants.h"
+#include "bench25.hpp"
 
 #include <kwk/context/sycl/context.hpp>
 #include <kwk/context/eve/context.hpp>
@@ -2135,6 +2136,12 @@ namespace traccc {
             ::sycl::queue sycl_q(d_selector, exception_handler);
             sycl_q.wait_and_throw();
 
+            if (bench25::use_file)
+            {
+              std::string device_name = sycl_q.get_device().get_info<sycl::info::device::name>();
+              bench25::f_log << "Using SYCL device: " << device_name << "\n\n";
+            }
+
             bench_variables bench;
             bench.mode = mode;
             bench.mstrat = memory_strategy;
@@ -2212,20 +2219,35 @@ namespace traccc {
         //gpu_timer gtimer;
 
         // Je laisse tous les champs pour que ça reste compatible avec ce qui existe déjà
-        write_file 
-        << "\n\ntraccc_main_sequence" << "\n";
-        write_file << "Mode: ";
-        switch(mode)
+        if (bench25::use_file)
         {
-          case shared_USM: write_file << "shared_USM"; break;
-          case device_USM: write_file << "device_USM"; break;
-          case host_USM: write_file << "host_USM"; break;
-          case accessors: write_file << "accessors"; break;
-          case glibc: write_file << "glibc"; break;
-          case kiwaku: write_file << "kiwaku"; break;
-          default: write_file << "!!!BACKEND INCONNU!!! sycl_mode = ???"; break;
+          switch(mode)
+          {
+            case shared_USM: bench25::f_log << "shared_USM"; break;
+            case device_USM: bench25::f_log << "device_USM"; break;
+            case host_USM:   bench25::f_log << "host_USM"; break;
+            case accessors:  bench25::f_log << "accessors"; break;
+            case glibc:      bench25::f_log << "glibc"; break;
+            case kiwaku:     bench25::f_log << "kiwaku"; break;
+            default:         bench25::f_log << "!!!BACKEND INCONNU!!! sycl_mode = ???"; break;
+          }
+          bench25::f_log << " - " << mem_strategy_to_int(mstrat) << std::endl;
         }
-        write_file << std::endl;
+
+        // write_file 
+        // << "\n\ntraccc_main_sequence" << "\n";
+        // write_file << "Mode: ";
+        // switch(mode)
+        // {
+        //   case shared_USM: write_file << "shared_USM"; break;
+        //   case device_USM: write_file << "device_USM"; break;
+        //   case host_USM: write_file << "host_USM"; break;
+        //   case accessors: write_file << "accessors"; break;
+        //   case glibc: write_file << "glibc"; break;
+        //   case kiwaku: write_file << "kiwaku"; break;
+        //   default: write_file << "!!!BACKEND INCONNU!!! sycl_mode = ???"; break;
+        // }
+        // write_file << std::endl;
         
         
         write_file 
@@ -2275,7 +2297,7 @@ namespace traccc {
 
             cres = traccc_bench(mode, mstrat);
 
-            write_file << "Iteration(" << rpt << "):\n";
+            // write_file << "Iteration(" << rpt << "):\n";
 
             write_file
             << cres.t_alloc_native << " "
@@ -2290,6 +2312,23 @@ namespace traccc {
                 write_file << cres.t_kernel[ik] << " ";
             }
             write_file << "\n";
+
+            if (bench25::use_file)
+            {
+              bench25::f_log
+              << "alloc_native: " << cres.t_alloc_native << "\n"
+              << "t_alloc_sycl: " << cres.t_alloc_sycl << "\n"
+              << "t_fill: " << cres.t_fill << "\n"
+              << "t_copy: " << cres.t_copy << "\n"
+              << "t_read: " << cres.t_read << "\n"
+              << "t_dealloc_sycl: " << cres.t_dealloc_sycl << "\n"
+              << "t_dealloc_native: " << cres.t_dealloc_native << "\n"
+              << "kernel_count: " << cres.kernel_count << "\n";
+              for (uint ik = 0; ik < cres.kernel_count; ++ik) {
+                  bench25::f_log << "kernel(" << ik << "): " << cres.t_kernel[ik] << "\n";
+              }
+              bench25::f_log << "\n";
+            }
 
             progress_increment();
             progress_print();
@@ -2373,11 +2412,13 @@ namespace traccc {
         }
     }
 
-    int main_of_traccc( const std::string & OUTPUT_FILE_NAME, std::function<void(std::ofstream &)> bench_function) {
+    int main_of_traccc( std::string const& OUTPUT_FILE_NAME
+                      , std::function<void(std::ofstream &)> bench_function) {
         std::ofstream myfile;
         std::string wdir_tmp = std::filesystem::current_path();
         std::string wdir = wdir_tmp + "/output/";
         std::string output_file_path = wdir + std::string(OUTPUT_FILE_NAME);
+
 
         if ( file_exists_test0(output_file_path) ) {
             log("\n\n\n\n\nFILE ALREADY EXISTS, SKIPPING TEST");
@@ -2387,6 +2428,7 @@ namespace traccc {
         }
 
         myfile.open(output_file_path);
+
         log("");
 
         log("current_path     = " + wdir);
@@ -2422,6 +2464,8 @@ namespace traccc {
         bench_function(myfile);
         
         myfile.close();
+        if (bench25::use_file) bench25::f_log.close();
+
         log("OK, done.");
 
         /*if ( KEEP_SAME_DATASETS ) {
@@ -2439,9 +2483,21 @@ namespace traccc {
         std::string file_name_prefix = "_" + computer_name + "_ld" + std::to_string(base_traccc_repeat_load_count); // 02
         std::string file_name_const_part = file_name_prefix + "_RUUUUUN" + std::to_string(run_count) + "_" + runtime_environment.device_name + ".t";
 
+        std::string bench25_name = bench25::fprefix() 
+                                 // nombre de fois que le fichier des cellules est chargé
+                                 + "ld" + std::to_string(base_traccc_repeat_load_count) 
+                                 // Nombre de fois que chaque calcul est lancé (pour avoir une médiane des temps)
+                                 + "_run" + std::to_string(run_count);
+ 
+
         bool do_sparse_bench = false;
 
         std::string OUTPUT_FILE_NAME ;
+
+        // Par défaut pas de fichier d'utilisé
+        bench25::use_file = false;
+        std::string out_dir = std::string(std::filesystem::current_path()) + "/output/";
+        std::string bench25_name_full;
 
         switch (test_id) {
         //reset_bench_variables();
@@ -2453,19 +2509,31 @@ namespace traccc {
         // case 1 et 2 utiles pour le papier et la version David
         case 1:
             OUTPUT_FILE_NAME = BENCHMARK_VERSION_TRACCC + "_generalFlatten" + file_name_const_part ; // TRACCC_OUT_FNAME
+            bench25_name_full = out_dir + bench25_name + "_generalFlatten.bench";
+
+            bench25::use_file = true;
+            std::cout << "\nOUTPUT FILE: " << bench25_name_full << "\n\n";
+            bench25::f_log.open(bench25_name_full);
+
             ignore_pointer_graph_benchmark = true;
             ignore_flatten_benchmark = false;
             // inutile ici implicit_use_unique_module = false;
-            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME, bench_mem_location_and_strategy);
             break;
 
         // case 1 et 2 utiles pour le papier et la version David
         case 2:
             OUTPUT_FILE_NAME = BENCHMARK_VERSION_TRACCC + "_generalGraphPtr_uniqueModules" + file_name_const_part; // TRACCC_OUT_FNAME
+            bench25_name_full = out_dir + bench25_name + "_generalGraphPtr_uniqueModules.bench";
+
+            bench25::use_file = true;
+            std::cout << "\nOUTPUT FILE: " << bench25_name_full << "\n\n";
+            bench25::f_log.open(bench25_name_full);
+
             ignore_pointer_graph_benchmark = false;
             ignore_flatten_benchmark = true;
-            implicit_use_unique_module = true;
-            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
+            implicit_use_unique_module = true; // TODO: second fichier avec les infos pur les benchs 2025
+            main_of_traccc(OUTPUT_FILE_NAME, bench_mem_location_and_strategy);
             break;
 
         case 3: // inutile pour le papier
@@ -2473,7 +2541,7 @@ namespace traccc {
             ignore_pointer_graph_benchmark = false;
             ignore_flatten_benchmark = true;
             implicit_use_unique_module = false;
-            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME ,bench_mem_location_and_strategy);
             break;
 
         case 4: // inutile pour le papier
@@ -2481,7 +2549,7 @@ namespace traccc {
             ignore_pointer_graph_benchmark = false;
             ignore_flatten_benchmark = true;
             // inutile ici implicit_use_unique_module = false;
-            main_of_traccc(OUTPUT_FILE_NAME,bench_mem_location_and_strategy);
+            main_of_traccc(OUTPUT_FILE_NAME, bench_mem_location_and_strategy);
             break;
 
 
