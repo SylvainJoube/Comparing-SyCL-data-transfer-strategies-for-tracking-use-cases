@@ -1689,94 +1689,126 @@ namespace traccc {
               // ==== parallel for ====
               class MyKernel_flat_acc;
 
-              const unsigned int total_module_count_const = total_module_count;
+              // const unsigned int total_module_count_const = total_module_count;
               const unsigned int max_cell_count_per_module = 1000;
+  
+              // ::kwk::sycl::default_context
+              // ::kwk::cpu
+              auto kwk_context = ::kwk::sycl::default_context;
+
+              // Kiwaku views
+              [[maybe_unused]] auto kwk_in_cells   = kwk::view{kwk::source = b.flat_input.cells, kwk::of_size(total_cell_count)};
+              [[maybe_unused]] auto kwk_in_modules = kwk::view{kwk::source = b.flat_input.modules, kwk::of_size(total_module_count)};
+
+              [[maybe_unused]] auto kwk_out_cells   = kwk::view{kwk::source = b.flat_output.cells, kwk::of_size(total_cell_count)};
+              [[maybe_unused]] auto kwk_out_modules = kwk::view{kwk::source = b.flat_output.modules, kwk::of_size(total_module_count)};
+
+              // Proxies (equivalent to SYCL buffers)
+              // auto kproxy_in_cells  = decltype(kwk_context)::in(kwk_in_cells);
+              // auto kproxy_out_cells = decltype(kwk_context)::out(kwk_out_cells);
+              
+
               
               // TODO: convertir ça en vues Kiwaku, et importer Kiwaku.
               // Input buffers
-              ::sycl::buffer<traccc::input_cell, 1> *buffer_input_cells  = b.flat_input.buffer_cells; // wraps b.flat_input.cells
-              ::sycl::buffer<traccc::flat_input_module, 1> *buffer_input_modules  = b.flat_input.buffer_modules; // wraps b.flat_input.modules
+              // ::sycl::buffer<traccc::input_cell, 1> *buffer_input_cells  = b.flat_input.buffer_cells; // wraps b.flat_input.cells
+              // ::sycl::buffer<traccc::flat_input_module, 1> *buffer_input_modules  = b.flat_input.buffer_modules; // wraps b.flat_input.modules
 
-              // Output buffers
-              ::sycl::buffer<traccc::output_cell, 1> *buffer_output_cells  = b.flat_output.buffer_cells; // wraps b.flat_output.cells
-              ::sycl::buffer<traccc::flat_output_module, 1> *buffer_output_modules  = b.flat_output.buffer_modules; // wraps b.flat_output.modules
+              // // Output buffers
+              // ::sycl::buffer<traccc::output_cell, 1> *buffer_output_cells  = b.flat_output.buffer_cells; // wraps b.flat_output.cells
+              // ::sycl::buffer<traccc::flat_output_module, 1> *buffer_output_modules  = b.flat_output.buffer_modules; // wraps b.flat_output.modules
               
 
               // Lancement de plusieurs kernels à la suite
               for (uint ik = 0; ik < b.chres.kernel_count; ++ik) {
-                  
-                  b.sycl_q.submit([&](::sycl::handler &h) {
 
-                      // Initialisation via le constructeur des accesseurs
-                      ::sycl::accessor a_input_cells(*buffer_input_cells, h, ::sycl::read_only);
-                      ::sycl::accessor a_input_modules(*buffer_input_modules, h, ::sycl::read_only);
+                  //   struct flat_input_module {
+                  //     unsigned int cell_count; // nombre de cellules du module
+                  //     unsigned int cell_start_index; // start index dans le grand tableau des cellules
+                  // };
 
-                      ::sycl::accessor a_output_cells(*buffer_output_cells, h, ::sycl::write_only, ::sycl::no_init); // noinit non supporté par hipsycl visiblement
-                      ::sycl::accessor a_output_modules(*buffer_output_modules, h, ::sycl::write_only, ::sycl::no_init);
+                  // &kproxy_in_cells, &kproxy_out_cells
+                  // auto kernel = [=](flat_input_module& in_module, flat_output_module& out_module)
+                  auto kernel = [=] ( auto module_index
+                                    , auto& acc_in_modules
+                                    , auto& acc_out_modules
+                                    , auto& acc_in_cells
+                                    , auto& acc_out_cells
+                                    )
+                  {
+                      flat_input_module const& in_module = acc_in_modules[module_index];
+                      flat_output_module& out_module     = acc_out_modules[module_index];
+                      
+                      uint first_cindex = in_module.cell_start_index;
+                      uint cell_count = in_module.cell_count;
+                      // uint cell_index = first_cindex;
+                      // uint stop_cindex = first_cindex + cell_count;
 
-                      h.parallel_for(::sycl::range<1>(total_module_count_const), [=](::sycl::id<1> module_indexx) {
-                          uint module_index = module_indexx[0] % total_module_count_const;
-                          // ---- SparseCCL part ----
+                      // auto acc_in_cells = kproxy_in_cells.access(*kwk_context.current_handler);
+                      // auto acc_out_cells = kproxy_out_cells.access(*kwk_context.current_handler);
+                      
 
-                          //traccc::flat_input_module * module_in
+                      // auto acc_in_cells = kwk_context.access(kproxy_in_cells);
+                      // auto acc_out_cells = kwk_context.access(kproxy_out_cells);
 
-                          uint first_cindex = a_input_modules[module_index].cell_start_index;
-                          uint cell_count = a_input_modules[module_index].cell_count;
-                          // uint cell_index = first_cindex;
-                          // uint stop_cindex = first_cindex + cell_count;
+                      // ...
 
-                          // ...
+                      // The very dirty part : statically allocate a buffer of the maximum pixel density per module...
+                      uint L[max_cell_count_per_module];
 
-                          // The very dirty part : statically allocate a buffer of the maximum pixel density per module...
-                          uint L[max_cell_count_per_module];
+                      for (uint ic = 0; ic < cell_count; ++ic) {
+                          acc_out_cells[first_cindex + ic].label = 0;
+                          // init oublié ?
+                          L[ic] = 0; /// max_cell_count_per_module
+                      }
 
-                          for (uint ic = 0; ic < cell_count; ++ic) {
-                              a_output_cells[first_cindex + ic].label = 0;
-                              // init oublié ?
-                              L[ic] = 0; /// max_cell_count_per_module
-                          }
+                      unsigned int start_j = 0;
+                      for (unsigned int i=0; i < cell_count; ++i){
+                          L[i] = i;
+                          int ai = i;
+                          if (i > 0){
 
-                          unsigned int start_j = 0;
-                          for (unsigned int i=0; i < cell_count; ++i){
-                              L[i] = i;
-                              int ai = i;
-                              if (i > 0){
+                              const input_cell &ci = acc_in_cells[first_cindex + i];
 
-                                  const input_cell &ci = a_input_cells[first_cindex + i];
-
-                                  for (unsigned int j = start_j; j < i; ++j){
-                                      const input_cell &cj = a_input_cells[first_cindex + j];
-                                      if (is_adjacent(ci, cj)){
-                                          ai = make_union(L, ai, find_root(L, j));
-                                      } else if (is_far_enough(ci, cj)){
-                                          ++start_j;
-                                      }
+                              for (unsigned int j = start_j; j < i; ++j){
+                                  const input_cell &cj = acc_in_cells[first_cindex + j];
+                                  if (is_adjacent(ci, cj)){
+                                      ai = make_union(L, ai, find_root(L, j));
+                                  } else if (is_far_enough(ci, cj)){
+                                      ++start_j;
                                   }
                               }
                           }
+                      }
 
-                          // second scan: transitive closure
-                          uint labels = 0;
-                          for (unsigned int i = 0; i < cell_count; ++i){
-                              unsigned int l = 0;
-                              if (L[i] == i){
-                                  ++labels;
-                                  l = labels; 
-                              } else {
-                                  l = L[L[i]];
-                              }
-                              L[i] = l;
+                      // second scan: transitive closure
+                      uint labels = 0;
+                      for (unsigned int i = 0; i < cell_count; ++i){
+                          unsigned int l = 0;
+                          if (L[i] == i){
+                              ++labels;
+                              l = labels; 
+                          } else {
+                              l = L[L[i]];
                           }
+                          L[i] = l;
+                      }
 
-                          // Update the output values
-                          for (unsigned int i = 0; i < cell_count; ++i){
-                              a_output_cells[first_cindex + i].label = L[i];
-                          }
-                          a_output_modules[module_index].cluster_count = labels;
-                      });
-                  }).wait_and_throw();
+                      // Update the output values
+                      for (unsigned int i = 0; i < cell_count; ++i){
+                        acc_out_cells[first_cindex + i].label = L[i];
+                      }
+                      out_module.cluster_count = labels;
+                  };
 
-                  b.sycl_q.wait_and_throw();
+                  kwk_context.map_ext (kernel
+                                      , kwk_context.in(kwk_in_modules)
+                                      , kwk_context.out(kwk_out_modules)
+                                      , kwk_context.in(kwk_in_cells)
+                                      , kwk_context.out(kwk_out_cells)
+                                      );
+                  // kwk::for_each(kwk_context, kernel, kwk_in_modules, kwk_out_modules);
+
                   b.chres.t_kernel[ik] = chrono.reset();
               }
 
@@ -2000,7 +2032,7 @@ namespace traccc {
         } else { // flatten
 
             // Libérartion de la mémoire host aussi pour device USM
-            if ( (b.mode == sycl_mode::glibc) || (b.mode == sycl_mode::device_USM) ) {
+            if ( (b.mode == sycl_mode::glibc) || (b.mode == sycl_mode::device_USM) || (b.mode == sycl_mode::kiwaku) ) {
                 delete[] b.flat_input.cells;
                 delete[] b.flat_output.cells;
                 delete[] b.flat_input.modules;
@@ -2181,7 +2213,7 @@ namespace traccc {
 
         // Je laisse tous les champs pour que ça reste compatible avec ce qui existe déjà
         write_file 
-        << "Nouveau fichier de bench 2025." << "\n";
+        << "\n\ntraccc_main_sequence" << "\n";
         write_file << "Mode: ";
         switch(mode)
         {
@@ -2190,7 +2222,8 @@ namespace traccc {
           case host_USM: write_file << "host_USM"; break;
           case accessors: write_file << "accessors"; break;
           case glibc: write_file << "glibc"; break;
-          default: break;
+          case kiwaku: write_file << "kiwaku"; break;
+          default: write_file << "!!!BACKEND INCONNU!!! sycl_mode = ???"; break;
         }
         write_file << std::endl;
         
@@ -2294,7 +2327,7 @@ namespace traccc {
         
         //traccc_chrono_results cres;
 
-        for (int imode = 0; imode <= 4; ++imode) 
+        for (int imode = 0; imode <= 5; ++imode) // 2025 : passage de 4 à 5 pour inclure KIWAKU
         //for (int ignore_at = 0; ignore_at <= 1; ++ignore_at)
         for (int imcp = 0; imcp <= 1; ++imcp)
         {
@@ -2319,12 +2352,14 @@ namespace traccc {
             case 2: CURRENT_MODE = sycl_mode::host_USM; break;
             case 3: CURRENT_MODE = sycl_mode::device_USM; break;
             case 4: CURRENT_MODE = sycl_mode::accessors; break;
+            case 5: CURRENT_MODE = sycl_mode::kiwaku; break; // TODO 2025: a une utilité ?
             default : break;
             }
 
             if (memory_strategy == pointer_graph) {
                 if (CURRENT_MODE == device_USM) continue;
                 if (CURRENT_MODE == accessors) continue;
+                if (CURRENT_MODE == kiwaku) continue;
             }
 
             //if (CURRENT_MODE == host_USM) continue; // TEMP ACAT : prend trooop de temps
@@ -2402,7 +2437,7 @@ namespace traccc {
     void run_single_test_generic_traccc(std::string computer_name,
                              uint test_id, uint run_count) {
         std::string file_name_prefix = "_" + computer_name + "_ld" + std::to_string(base_traccc_repeat_load_count); // 02
-        std::string file_name_const_part = file_name_prefix + "_RUN" + std::to_string(run_count) + "_" + runtime_environment.device_name + ".t";
+        std::string file_name_const_part = file_name_prefix + "_RUUUUUN" + std::to_string(run_count) + "_" + runtime_environment.device_name + ".t";
 
         bool do_sparse_bench = false;
 
