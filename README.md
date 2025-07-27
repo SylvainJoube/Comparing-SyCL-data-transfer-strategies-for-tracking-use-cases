@@ -2,6 +2,69 @@
 
 1. Cloner le repo sur la machine sur laquelle faire les tests.
 
+## Dépendances
+
+
+### Téléchargement de EVE, Kiwaku, Raberu et Kumi
+
+```bash
+mkdir dependencies && \
+git clone https://github.com/SylvainJoube/raberu.git dependencies/raberu && \
+git clone https://github.com/SylvainJoube/kumi.git dependencies/kumi && \
+git clone https://github.com/SylvainJoube/eve.git dependencies/eve_tag2023 && \
+cd dependencies/eve_tag2023 && \
+git checkout tags/v2023.02.15 && \
+cd ../.. && \
+git clone https://github.com/jfalcou/kiwaku.git kiwaku_source && \
+cd kiwaku_source && \
+git checkout contexts_v2 && \
+cd ..
+
+
+```
+
+### Création du script d'environnement
+
+```bash
+export ENV_FNAME="setup_env.txt" && \
+"#!/bin/bash" > ${ENV_FNAME} && \
+echo >> ${ENV_FNAME} && \
+"export SCCL_DEPS_DIR=$(pwd)/dependencies" >> ${ENV_FNAME} && \
+"export EVE_FLAG=\"-mavx2 -mfma\"" >> ${ENV_FNAME} && \
+chmod +x ${ENV_FNAME}
+
+# Options possibles :
+export EVE_FLAG=""
+export EVE_FLAG="-msse4.2"
+export EVE_FLAG="-mavx2 -mfma"
+export EVE_FLAG="-march=skylake-avx512"
+
+# Source du fichier, à chaque nouveau terminal
+./${ENV_FNAME}
+```
+
+### Compilation
+
+```bash
+# Source du fichier, à chaque nouveau terminal
+./${ENV_FNAME}
+
+icpx sparse_ccl.cpp constants.cc progress.cc utils.cc \
+-o sparseccl \
+-ffp-model=precise \
+-DNDEBUG \
+-fsycl \
+${EVE_FLAG} \
+-O3 \
+-std=c++20 \
+-Wall \
+-Wextra \
+-I${SCCL_DEPS_DIR}/kiwaku_source/include \
+-I${SCCL_DEPS_DIR}/raberu/include \
+-I${SCCL_DEPS_DIR}/kumi/include \
+-I${SCCL_DEPS_DIR}/eve_tag2023/include
+```
+
 2. Preparation des répertoires, mises à jour du PATH, définition des alias :
 
 ```
