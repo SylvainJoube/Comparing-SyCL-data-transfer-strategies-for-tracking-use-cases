@@ -24,7 +24,9 @@ int mode_to_int(sycl_mode m) {
     case host_USM : return 2;
     case accessors : return 3;
     case glibc : return 20;
-    case kiwaku : return 50;
+    case kiwaku_cpu : return 50;
+    case kiwaku_simd : return 51;
+    case kiwaku_sycl : return 52;
     }
     return -1;
 }
@@ -36,7 +38,9 @@ std::string mode_to_string(sycl_mode m) {
     case host_USM : return "host_USM";
     case accessors : return "accessors";
     case glibc : return "glibc";
-    case kiwaku : return "kiwaku";
+    case kiwaku_cpu : return "kiwaku_cpu";
+    case kiwaku_simd : return "kiwaku_simd";
+    case kiwaku_sycl : return "kiwaku_sycl";
     }
     return "unknown";
 }

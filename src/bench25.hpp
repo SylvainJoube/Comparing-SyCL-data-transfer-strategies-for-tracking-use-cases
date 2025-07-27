@@ -65,7 +65,8 @@ namespace bench25
 
   enum backend_t { GPU, CPU };
 
-  backend_t preferred_backend;
+  // Indiqué dans les options lors du lancement
+  backend_t CHOOSEN_BACKEND = CPU;
 
   // Mis en variable globale pour aller plus vite
   bool use_file = false;

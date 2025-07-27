@@ -22,6 +22,7 @@
 
 #include <kwk/context/sycl/context.hpp>
 #include <kwk/context/eve/context.hpp>
+#include <kwk/context/cpu/context.hpp>
 #include <kwk/algorithm/algos/for_each.hpp>
 #include <kwk/algorithm/algos/reduce.hpp>
 #include <kwk/container.hpp>
@@ -895,7 +896,12 @@ namespace traccc {
             // Alloc - b.mode == sycl_mode::device_USM était avec malloc_host avant
             // Changement : mémoire USM device allouée via glibc
             // 2025: Utilisation de vues Kiwaku sur les données
-            if ( (b.mode == sycl_mode::glibc)  ||  (b.mode == sycl_mode::device_USM)  ||  (b.mode == sycl_mode::kiwaku) ) {
+            if ((b.mode == sycl_mode::glibc)  
+            ||  (b.mode == sycl_mode::device_USM)  
+            ||  (b.mode == sycl_mode::kiwaku_cpu)  
+            ||  (b.mode == sycl_mode::kiwaku_simd)  
+            ||  (b.mode == sycl_mode::kiwaku_sycl) )
+            {
                 b.flat_input.cells  = new input_cell[total_cell_count];
                 b.flat_output.cells = new output_cell[total_cell_count];
                 b.flat_input.modules = new flat_input_module[total_module_count];
@@ -1686,7 +1692,7 @@ namespace traccc {
 
             // ============================ KIWAKU ============================
             // Exécution du kernel
-            if ( b.mode == sycl_mode::kiwaku ) {
+            if ( b.mode == sycl_mode::kiwaku_sycl ) {
               // ==== parallel for ====
               class MyKernel_flat_acc;
 
@@ -1707,6 +1713,10 @@ namespace traccc {
               // Proxies (equivalent to SYCL buffers)
               // auto kproxy_in_cells  = decltype(kwk_context)::in(kwk_in_cells);
               // auto kproxy_out_cells = decltype(kwk_context)::out(kwk_out_cells);
+              auto kproxy_in_modules  = kwk_context.in(kwk_in_modules);
+              auto kproxy_out_modules = kwk_context.out(kwk_out_modules);
+              auto kproxy_in_cells    = kwk_context.in(kwk_in_cells);
+              auto kproxy_out_cells   = kwk_context.out(kwk_out_cells);
               
 
               
@@ -1803,11 +1813,17 @@ namespace traccc {
                   };
 
                   kwk_context.map_ext (kernel
-                                      , kwk_context.in(kwk_in_modules)
-                                      , kwk_context.out(kwk_out_modules)
-                                      , kwk_context.in(kwk_in_cells)
-                                      , kwk_context.out(kwk_out_cells)
+                                      , kproxy_in_modules
+                                      , kproxy_out_modules
+                                      , kproxy_in_cells
+                                      , kproxy_out_cells
                                       );
+                  // kwk_context.map_ext (kernel
+                  //                     , kwk_context.in(kwk_in_modules)
+                  //                     , kwk_context.out(kwk_out_modules)
+                  //                     , kwk_context.in(kwk_in_cells)
+                  //                     , kwk_context.out(kwk_out_cells)
+                  //                     );
                   // kwk::for_each(kwk_context, kernel, kwk_in_modules, kwk_out_modules);
 
                   b.chres.t_kernel[ik] = chrono.reset();
@@ -1823,6 +1839,110 @@ namespace traccc {
 
               // b.chres.t_read = chrono.reset();
           }
+
+
+
+
+          if ( (b.mode == sycl_mode::kiwaku_cpu)
+          ||   (b.mode == sycl_mode::kiwaku_simd) ) 
+          {
+            // ==== parallel for ====
+            class MyKernel_flat_acc;
+
+            // const unsigned int total_module_count_const = total_module_count;
+            const unsigned int max_cell_count_per_module = 1000;
+
+            // Kiwaku views
+            [[maybe_unused]] auto kwk_in_cells   = kwk::view{kwk::source = b.flat_input.cells, kwk::of_size(total_cell_count)};
+            [[maybe_unused]] auto kwk_in_modules = kwk::view{kwk::source = b.flat_input.modules, kwk::of_size(total_module_count)};
+
+            [[maybe_unused]] auto kwk_out_cells   = kwk::view{kwk::source = b.flat_output.cells, kwk::of_size(total_cell_count)};
+            [[maybe_unused]] auto kwk_out_modules = kwk::view{kwk::source = b.flat_output.modules, kwk::of_size(total_module_count)};
+
+
+            auto kernel = [=] ( auto const& in_module // flat_input_module
+                                  , auto& out_module      // flat_output_module
+                                  )
+            {
+                // flat_input_module const& in_module = acc_in_modules[module_index];
+                // flat_output_module& out_module     = acc_out_modules[module_index];
+                
+                uint first_cindex = in_module.cell_start_index;
+                uint cell_count = in_module.cell_count;
+
+                // The very dirty part : statically allocate a buffer of the maximum pixel density per module...
+                uint L[max_cell_count_per_module];
+
+                for (uint ic = 0; ic < cell_count; ++ic) {
+                    kwk_out_cells(first_cindex + ic).label = 0;
+                    // init oublié ?
+                    L[ic] = 0; /// max_cell_count_per_module
+                }
+
+                unsigned int start_j = 0;
+                for (unsigned int i=0; i < cell_count; ++i){
+                    L[i] = i;
+                    int ai = i;
+                    if (i > 0){
+
+                        const input_cell &ci = kwk_in_cells(first_cindex + i);
+
+                        for (unsigned int j = start_j; j < i; ++j){
+                            const input_cell &cj = kwk_in_cells(first_cindex + j);
+                            if (is_adjacent(ci, cj)){
+                                ai = make_union(L, ai, find_root(L, j));
+                            } else if (is_far_enough(ci, cj)){
+                                ++start_j;
+                            }
+                        }
+                    }
+                }
+
+                // second scan: transitive closure
+                uint labels = 0;
+                for (unsigned int i = 0; i < cell_count; ++i){
+                    unsigned int l = 0;
+                    if (L[i] == i){
+                        ++labels;
+                        l = labels; 
+                    } else {
+                        l = L[L[i]];
+                    }
+                    L[i] = l;
+                }
+
+                // Update the output values
+                for (unsigned int i = 0; i < cell_count; ++i){
+                  kwk_out_cells(first_cindex + i).label = L[i];
+                }
+                out_module.cluster_count = labels;
+            };
+
+            // TODO 2025, ajouter "chrono.reset();" ?
+            // Lancement de plusieurs kernels à la suite
+            for (uint ik = 0; ik < b.chres.kernel_count; ++ik)
+            {
+                // ::kwk::sycl::default_context
+                // ::kwk::cpu
+                // ::kwk::simd
+
+                if (b.mode == sycl_mode::kiwaku_cpu)
+                {
+                    kwk::for_each(::kwk::cpu, kernel, kwk_in_modules, kwk_out_modules);
+                }
+
+                if (b.mode == sycl_mode::kiwaku_simd)
+                {
+                    kwk::for_each(::kwk::simd, kernel, kwk_in_modules, kwk_out_modules);
+                }
+                // kwk_context.map( kernel
+                //                , kwk_in_modules
+                //                , kwk_out_modules
+                //                );
+
+                b.chres.t_kernel[ik] = chrono.reset();
+            }
+        }
           // ================================================================
 
 
@@ -2033,7 +2153,12 @@ namespace traccc {
         } else { // flatten
 
             // Libérartion de la mémoire host aussi pour device USM
-            if ( (b.mode == sycl_mode::glibc) || (b.mode == sycl_mode::device_USM) || (b.mode == sycl_mode::kiwaku) ) {
+            if ((b.mode == sycl_mode::glibc) 
+            ||  (b.mode == sycl_mode::device_USM) 
+            || (b.mode == sycl_mode::kiwaku_cpu)
+            || (b.mode == sycl_mode::kiwaku_simd)
+            || (b.mode == sycl_mode::kiwaku_sycl) ) 
+            {
                 delete[] b.flat_input.cells;
                 delete[] b.flat_output.cells;
                 delete[] b.flat_input.modules;
@@ -2107,34 +2232,80 @@ namespace traccc {
 
 
 
-        // The custom device selector is now a lambda function.
-        // It captures any necessary variables and returns an integer score.
-        auto d_selector = [](const sycl::device& device) {
-          if (!FORCE_EXECUTION_ON_NAMED_DEVICE) {
-              // Use the default selector's scoring mechanism.
-              // A GPU is preferred over a CPU.
-              if (device.is_gpu()) return 100;
-              if (device.is_cpu()) return 50;
-              return -1; // Reject other devices
-          } else {
-              // Force selection of a device by name.
-              std::string devName = device.get_info<sycl::info::device::name>();
-              log(devName);
-              if (devName.find(MUST_RUN_ON_DEVICE_NAME) != std::string::npos) {
-                  log("Right device found: " + devName);
-                  return 150; // Return a high score to ensure it's picked
-              }
-              return -1; // Reject all other devices
-          }
-        };
+        // // The custom device selector is now a lambda function.
+        // // It captures any necessary variables and returns an integer score.
+        // auto d_selector = [](const sycl::device& device) {
+        //   if (!FORCE_EXECUTION_ON_NAMED_DEVICE) {
+        //       // Use the default selector's scoring mechanism.
+        //       // A GPU is preferred over a CPU.
+        //       if (device.is_gpu()) return 100;
+        //       if (device.is_cpu()) return 50;
+        //       return -1; // Reject other devices
+        //   } else {
+        //       // Force selection of a device by name.
+        //       std::string devName = device.get_info<sycl::info::device::name>();
+        //       log(devName);
+        //       if (devName.find(MUST_RUN_ON_DEVICE_NAME) != std::string::npos) {
+        //           log("Right device found: " + devName);
+        //           return 150; // Return a high score to ensure it's picked
+        //       }
+        //       return -1; // Reject all other devices
+        //   }
+        // };
         // "Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz"
 
+        auto d_selector = [&](const sycl::device& device)
+        {
+            if (bench25::CHOOSEN_BACKEND == bench25::backend_t::CPU)
+            {
+                if (device.is_gpu()) return 1;
+                if (device.is_cpu()) return 100;
+                return -1; // Reject other devices
+            }
+
+            if (bench25::CHOOSEN_BACKEND == bench25::backend_t::GPU)
+            {
+                if (device.is_gpu()) return 100;
+                if (device.is_cpu()) return 1;
+                return -1; // Reject other devices
+            }
+            return -1; // Reject other devices
+        };
 
         // custom_device_selector d_selector;
         try {
             //chrono.reset(); //t_start = get_ms();
             ::sycl::queue sycl_q(d_selector, exception_handler);
             sycl_q.wait_and_throw();
+
+            std::string device_name = sycl_q.get_device().get_info<sycl::info::device::name>();
+
+            bool is_cpu = sycl_q.get_device().is_cpu();
+            bool is_gpu = sycl_q.get_device().is_gpu();
+
+            std::string dev_type = "UNKNOWN_DEVICE_TYPE";
+            if (is_gpu) dev_type = "GPU";
+            if (is_cpu) dev_type = "CPU";
+            
+            log("==================================");
+            log("Current device type: " + dev_type);
+            log("Current device name: " + device_name);
+            log("==================================");
+
+            if ((bench25::CHOOSEN_BACKEND == bench25::backend_t::CPU) && (!is_cpu))
+            {
+              log("REQUIRED DEVICE TYPE UNAVAILABLE: CPU.");
+              log("The device type was provided as the first program argument.");
+              std::terminate();
+            }
+
+            if ((bench25::CHOOSEN_BACKEND == bench25::backend_t::GPU) && (!is_gpu))
+            {
+              log("REQUIRED DEVICE TYPE UNAVAILABLE: GPU.");
+              log("The device type was provided as the first program argument.");
+              std::terminate();
+            }
+
 
             if (bench25::use_file)
             {
@@ -2223,13 +2394,15 @@ namespace traccc {
         {
           switch(mode)
           {
-            case shared_USM: bench25::f_log << "shared_USM"; break;
-            case device_USM: bench25::f_log << "device_USM"; break;
-            case host_USM:   bench25::f_log << "host_USM"; break;
-            case accessors:  bench25::f_log << "accessors"; break;
-            case glibc:      bench25::f_log << "glibc"; break;
-            case kiwaku:     bench25::f_log << "kiwaku"; break;
-            default:         bench25::f_log << "!!!BACKEND INCONNU!!! sycl_mode = ???"; break;
+            case shared_USM:  bench25::f_log << "shared_USM"; break;
+            case device_USM:  bench25::f_log << "device_USM"; break;
+            case host_USM:    bench25::f_log << "host_USM"; break;
+            case accessors:   bench25::f_log << "accessors"; break;
+            case glibc:       bench25::f_log << "glibc"; break;
+            case kiwaku_cpu:  bench25::f_log << "kiwaku_cpu"; break;
+            case kiwaku_simd: bench25::f_log << "kiwaku_simd"; break;
+            case kiwaku_sycl: bench25::f_log << "kiwaku_sycl"; break;
+            default:          bench25::f_log << "!!!BACKEND INCONNU!!! sycl_mode = ???"; break;
           }
           bench25::f_log << " - " << mem_strategy_to_int(mstrat) << std::endl;
         }
@@ -2366,7 +2539,7 @@ namespace traccc {
         
         //traccc_chrono_results cres;
 
-        for (int imode = 0; imode <= 5; ++imode) // 2025 : passage de 4 à 5 pour inclure KIWAKU
+        for (int imode = 0; imode <= 7; ++imode) // 2025 : passage de 4 à 7 pour inclure KIWAKU
         //for (int ignore_at = 0; ignore_at <= 1; ++ignore_at)
         for (int imcp = 0; imcp <= 1; ++imcp)
         {
@@ -2391,14 +2564,18 @@ namespace traccc {
             case 2: CURRENT_MODE = sycl_mode::host_USM; break;
             case 3: CURRENT_MODE = sycl_mode::device_USM; break;
             case 4: CURRENT_MODE = sycl_mode::accessors; break;
-            case 5: CURRENT_MODE = sycl_mode::kiwaku; break; // TODO 2025: a une utilité ?
+            case 5: CURRENT_MODE = sycl_mode::kiwaku_cpu; break;
+            case 6: CURRENT_MODE = sycl_mode::kiwaku_simd; break;
+            case 7: CURRENT_MODE = sycl_mode::kiwaku_sycl; break;
             default : break;
             }
 
             if (memory_strategy == pointer_graph) {
                 if (CURRENT_MODE == device_USM) continue;
                 if (CURRENT_MODE == accessors) continue;
-                if (CURRENT_MODE == kiwaku) continue;
+                if (CURRENT_MODE == kiwaku_cpu) continue;
+                if (CURRENT_MODE == kiwaku_simd) continue;
+                if (CURRENT_MODE == kiwaku_sycl) continue;
             }
 
             //if (CURRENT_MODE == host_USM) continue; // TEMP ACAT : prend trooop de temps
@@ -2478,12 +2655,18 @@ namespace traccc {
     }
 
 
-    void run_single_test_generic_traccc(std::string computer_name,
+    void run_single_test_generic_traccc([[maybe_unused]] std::string computer_name,
                              uint test_id, uint run_count) {
-        std::string file_name_prefix = "_" + computer_name + "_ld" + std::to_string(base_traccc_repeat_load_count); // 02
-        std::string file_name_const_part = file_name_prefix + "_RUUUUUN" + std::to_string(run_count) + "_" + runtime_environment.device_name + ".t";
+        std::string file_name_prefix = "_ld" + std::to_string(base_traccc_repeat_load_count); // 02
+        std::string file_name_const_part = file_name_prefix + "_run" + std::to_string(run_count) + ".t";
 
-        std::string bench25_name = bench25::fprefix() 
+        std::string f_dev_prefix = "UNKNOWN_DEVICE";
+        if (bench25::backend_t::CPU) f_dev_prefix = "CPU";
+        if (bench25::backend_t::GPU) f_dev_prefix = "GPU";
+
+        f_dev_prefix += "_" + bench25::fprefix();
+
+        std::string bench25_name = f_dev_prefix
                                  // nombre de fois que le fichier des cellules est chargé
                                  + "ld" + std::to_string(base_traccc_repeat_load_count) 
                                  // Nombre de fois que chaque calcul est lancé (pour avoir une médiane des temps)
@@ -2496,19 +2679,24 @@ namespace traccc {
 
         // Par défaut pas de fichier d'utilisé
         bench25::use_file = false;
-        std::string out_dir = std::string(std::filesystem::current_path()) + "/output/";
+        std::string out_dir = std::string(std::filesystem::current_path()) + "/output/human_readable/";
         std::string bench25_name_full;
 
         switch (test_id) {
         //reset_bench_variables();
 
+        // TODO: mettre date et heure + ne bench que ce qui est nécessaire en CPU et GPU
+        
         // bench_mem_location_and_strategy
 
         // Tout est dans le nom de fichiers
 
         // case 1 et 2 utiles pour le papier et la version David
         case 1:
-            OUTPUT_FILE_NAME = BENCHMARK_VERSION_TRACCC + "_generalFlatten" + file_name_const_part ; // TRACCC_OUT_FNAME
+            OUTPUT_FILE_NAME  = f_dev_prefix 
+                              + BENCHMARK_VERSION_TRACCC 
+                              + "_generalFlatten" 
+                              + file_name_const_part ; // TRACCC_OUT_FNAME
             bench25_name_full = out_dir + bench25_name + "_generalFlatten.bench";
 
             bench25::use_file = true;
@@ -2523,7 +2711,10 @@ namespace traccc {
 
         // case 1 et 2 utiles pour le papier et la version David
         case 2:
-            OUTPUT_FILE_NAME = BENCHMARK_VERSION_TRACCC + "_generalGraphPtr_uniqueModules" + file_name_const_part; // TRACCC_OUT_FNAME
+            OUTPUT_FILE_NAME  = f_dev_prefix 
+                              + BENCHMARK_VERSION_TRACCC 
+                              + "_generalGraphPtr_uniqueModules" 
+                              + file_name_const_part; // TRACCC_OUT_FNAME
             bench25_name_full = out_dir + bench25_name + "_generalGraphPtr_uniqueModules.bench";
 
             bench25::use_file = true;
@@ -2537,7 +2728,7 @@ namespace traccc {
             break;
 
         case 3: // inutile pour le papier
-            OUTPUT_FILE_NAME = BENCHMARK_VERSION_TRACCC + "_generalGraphPtr_inOutModules" + file_name_const_part; // TRACCC_OUT_FNAME
+            OUTPUT_FILE_NAME = f_dev_prefix + "_" + BENCHMARK_VERSION_TRACCC + "_generalGraphPtr_inOutModules" + file_name_const_part; // TRACCC_OUT_FNAME
             ignore_pointer_graph_benchmark = false;
             ignore_flatten_benchmark = true;
             implicit_use_unique_module = false;
@@ -2545,7 +2736,7 @@ namespace traccc {
             break;
 
         case 4: // inutile pour le papier
-            OUTPUT_FILE_NAME = BENCHMARK_VERSION_TRACCC + "_generalGraphPtr" + file_name_const_part; // TRACCC_OUT_FNAME
+            OUTPUT_FILE_NAME = f_dev_prefix + "_" + BENCHMARK_VERSION_TRACCC + "_generalGraphPtr" + file_name_const_part; // TRACCC_OUT_FNAME
             ignore_pointer_graph_benchmark = false;
             ignore_flatten_benchmark = true;
             // inutile ici implicit_use_unique_module = false;
@@ -2572,7 +2763,7 @@ namespace traccc {
 
         if (do_sparse_bench) { // inutile pour le papier
             std::string sparse_str = std::to_string(traccc_SPARSITY_MIN) + "-" + std::to_string(traccc_SPARSITY_MAX);
-            OUTPUT_FILE_NAME = BENCHMARK_VERSION_TRACCC + "_generalFlatten_sparse-" + sparse_str + file_name_const_part; // TRACCC_OUT_FNAME
+            OUTPUT_FILE_NAME = f_dev_prefix + "_" + BENCHMARK_VERSION_TRACCC + "_generalFlatten_sparse-" + sparse_str + file_name_const_part; // TRACCC_OUT_FNAME
             ignore_pointer_graph_benchmark = true;
             ignore_flatten_benchmark = false;
             // inutile ici implicit_use_unique_module = false;

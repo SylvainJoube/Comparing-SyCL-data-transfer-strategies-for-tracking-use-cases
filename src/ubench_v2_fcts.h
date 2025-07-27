@@ -563,11 +563,13 @@ data_type g_expected_sum;
         traccc_main_sequence(myfile, sycl_mode::host_USM,   true);
         
         // Implicit copy
-        traccc_main_sequence(myfile, sycl_mode::shared_USM, false);
-        traccc_main_sequence(myfile, sycl_mode::host_USM,   false);
-        traccc_main_sequence(myfile, sycl_mode::accessors,  false);
-        traccc_main_sequence(myfile, sycl_mode::glibc,      false);
-        traccc_main_sequence(myfile, sycl_mode::kiwaku,      false);
+        traccc_main_sequence(myfile, sycl_mode::shared_USM,  false);
+        traccc_main_sequence(myfile, sycl_mode::host_USM,    false);
+        traccc_main_sequence(myfile, sycl_mode::accessors,   false);
+        traccc_main_sequence(myfile, sycl_mode::glibc,       false);
+        traccc_main_sequence(myfile, sycl_mode::kiwaku_cpu,  false);
+        traccc_main_sequence(myfile, sycl_mode::kiwaku_simd, false);
+        traccc_main_sequence(myfile, sycl_mode::kiwaku_sycl, false);
 
 
         //bench_function(myfile);
