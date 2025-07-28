@@ -11,26 +11,26 @@
 mkdir dependencies && \
 git clone https://github.com/SylvainJoube/raberu.git dependencies/raberu && \
 git clone https://github.com/SylvainJoube/kumi.git dependencies/kumi && \
-git clone https://github.com/SylvainJoube/eve.git dependencies/eve_tag2023 && \
-cd dependencies/eve_tag2023 && \
-git checkout tags/v2023.02.15 && \
+git clone https://github.com/SylvainJoube/eve.git dependencies/eve_kwk_compatible && \
+cd dependencies/eve_kwk_compatible && \
+git checkout kwk_compatible && \
 cd ../.. && \
-git clone https://github.com/jfalcou/kiwaku.git kiwaku_source && \
-cd kiwaku_source && \
+git clone https://github.com/jfalcou/kiwaku.git dependencies/kiwaku_source && \
+cd dependencies/kiwaku_source && \
 git checkout contexts_v2 && \
-cd ..
-
-
+cd ../..
 ```
 
 ### Création du script d'environnement
 
 ```bash
-export ENV_FNAME="setup_env.txt" && \
-"#!/bin/bash" > ${ENV_FNAME} && \
+export ENV_FNAME="setup_env.sh" && \
+echo '#!/bin/bash' > ${ENV_FNAME} && \
 echo >> ${ENV_FNAME} && \
-"export SCCL_DEPS_DIR=$(pwd)/dependencies" >> ${ENV_FNAME} && \
-"export EVE_FLAG=\"-mavx2 -mfma\"" >> ${ENV_FNAME} && \
+echo "export SCCL_DEPS_DIR=$(pwd)/dependencies" >> ${ENV_FNAME} && \
+echo "export EVE_FLAG=\"-mavx2 -mfma\"" >> ${ENV_FNAME}
+
+
 chmod +x ${ENV_FNAME}
 
 # Options possibles :
@@ -40,14 +40,23 @@ export EVE_FLAG="-mavx2 -mfma"
 export EVE_FLAG="-march=skylake-avx512"
 
 # Source du fichier, à chaque nouveau terminal
-./${ENV_FNAME}
+source ${ENV_FNAME}
 ```
+
 
 ### Compilation
 
 ```bash
+export ENV_FNAME="setup_env.sh" && \
+source ${ENV_FNAME}
+
 # Source du fichier, à chaque nouveau terminal
-./${ENV_FNAME}
+
+# Contexte SYCL par défaut (CPU)
+export ICPX_FLAGS=""
+
+# Nvidia (si x86_64 ne fonctionne pas, prendre spir64)
+export ICPX_FLAGS="-fsycl-targets=nvptx64-nvidia-cuda,x86_64"
 
 icpx sparse_ccl.cpp constants.cc progress.cc utils.cc \
 -o sparseccl \
@@ -55,6 +64,7 @@ icpx sparse_ccl.cpp constants.cc progress.cc utils.cc \
 -DNDEBUG \
 -fsycl \
 ${EVE_FLAG} \
+${ICPX_FLAGS} \
 -O3 \
 -std=c++20 \
 -Wall \
@@ -62,10 +72,36 @@ ${EVE_FLAG} \
 -I${SCCL_DEPS_DIR}/kiwaku_source/include \
 -I${SCCL_DEPS_DIR}/raberu/include \
 -I${SCCL_DEPS_DIR}/kumi/include \
--I${SCCL_DEPS_DIR}/eve_tag2023/include
+-I${SCCL_DEPS_DIR}/eve_kwk_compatible/include
 ```
 
-2. Preparation des répertoires, mises à jour du PATH, définition des alias :
+### Compilation sur Legend
+
+```bash
+export SCCL_DEPS_DIR="/home/sylvainj/SparseCCL/dependencies" &&\
+export EVE_FLAG="-mavx2 -mfma" &&\
+export ICPX_FLAGS="-fsycl-targets=nvptx64-nvidia-cuda,x86_64"
+
+cd /home/sylvainj/SparseCCL/Comparing-SyCL-data-transfer-strategies-for-tracking-use-cases/src
+
+```
+
+
+
+### Exécution
+
+`./sparseccl "GPU" 10 1`
+* arg1: "CPU" ou "GPU" pour l'exécution SYCL
+* arg2: nombre de fois qu'il faut charger les données (pour avoir un jeu de données plus gros)
+* arg3: nombre de répétitions
+
+```bash
+./sparseccl GPU 10 1
+```
+
+
+
+1. Preparation des répertoires, mises à jour du PATH, définition des alias :
 
 ```
 source env.sh
