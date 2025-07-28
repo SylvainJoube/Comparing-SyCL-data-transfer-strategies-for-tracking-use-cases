@@ -11,7 +11,14 @@ import statistics as stat
 ## ============ CHARGEMENT ============
 
 # CPU, SYCL
-BENCH_TYPE="CPU"
+# BENCH_TYPE="CPU"
+# BENCH_TYPE="GPU"
+# BENCH_TYPE="CPU + GPU"
+# BENCH_TYPE="Kiwaku-only"
+# BENCH_TYPE="CPU ptr vs flat"
+
+BENCH_TYPE="CPU ptr"
+
 
 #FLAT_ARRAYS = False
 FLAT_ONLY = True
@@ -35,15 +42,19 @@ my_dpi = 96
 output_image_name = "le nom de ma belle image"
 output_image_name_ver = "ACAT-v2" #"5-4_brouillon" # 3_dl
 
-image_width = 1280
+image_width = 1600
 image_height = 1
 image_scale_factor = image_width / 640
 line_width = image_scale_factor * 1.5
 
 if FLAT_ONLY:
-    image_height = (image_width / 640) * 160 #198
+    image_height = (image_width / 640) * 300 #198
     plt.figure(figsize=(image_width/my_dpi, image_height/my_dpi) , dpi=my_dpi)
     output_image_name = "sparseccl_onlyFlat_" + output_image_name_ver + "_" + computer_name + ".png"
+
+    # image_height = (image_width / 640) * 160 #198
+    # plt.figure(figsize=(image_width/my_dpi, image_height/my_dpi) , dpi=my_dpi)
+    # output_image_name = "sparseccl_onlyFlat_" + output_image_name_ver + "_" + computer_name + ".png"
 else:
     image_height = (image_width / 640) * 258 # 273
     plt.figure(figsize=(image_width/my_dpi, image_height/my_dpi), dpi=my_dpi)
@@ -191,9 +202,25 @@ def load_file(filename, isFlatten, multiplyFactor):
     # print(" ________ FNALLY :  global_kernel_count = " + str(global_kernel_count))
 
 
+# CPU_parsys-legend_2025-07-27_23h36m32s_sparseccl108_generalFlatten_ld10_run1
 
-load_file("sparseccl108_generalFlatten__ld10_RUUUUUN1_.t", True, 1)
-load_file("sparseccl108_generalGraphPtr_uniqueModules__ld10_RUUUUUN1_.t", False, 1)
+computer_name = "parsys-legend"
+
+
+
+load_file("CPU_parsys-legend_2025-07-28_01h35m06s_sparseccl108_generalFlatten_ld300_run1.t", True, 1)
+# load_file("GPU_parsys-legend_2025-07-28_01h49m21s_sparseccl108_generalFlatten_ld300_run1.t", True, 1)
+# load_file("GPU_parsys-legend_2025-07-28_01h24m50s_sparseccl108_generalFlatten_ld300_run1.t", True, 1)
+# load_file("GPU_parsys-legend_2025-07-28_01h03m27s_sparseccl108_generalFlatten_ld200_run1.t", True, 1)
+
+load_file("CPU_parsys-legend_2025-07-28_01h35m46s_sparseccl108_generalGraphPtr_uniqueModules_ld300_run1.t", False, 1)
+# load_file("CPU_parsys-legend_2025-07-27_23h36m36s_sparseccl108_generalGraphPtr_uniqueModules_ld10_run1.t", False, 1)
+
+
+# load_file("sparseccl108_generalFlatten__ld10_RUUUUUN1_.t", True, 1)
+# load_file("sparseccl108_generalGraphPtr_uniqueModules__ld10_RUUUUUN1_.t", False, 1)
+
+
 # load_file("sparseccl108_generalFlatten_" + computer_name + "_ld10_RUUUUUN1.t", True, 1)
 # load_file("sparseccl108_generalGraphPtr_uniqueModules_" + computer_name + "_ld10_RUUUUUN1.t", False, 1)
 
@@ -515,15 +542,81 @@ plt.grid(linewidth=line_width/2)
 # https://matplotlib.org/stable/gallery/lines_bars_and_markers/linestyles.html
 
 if BENCH_TYPE == "CPU":
-    plt.title(computer_name + " CPU - SparseCCL - flat arrays")
-    draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
-    draw_curve("accessors", "maroon", y_list_acc, y_median_acc, "dashed")
+    plt.title(computer_name + " " + BENCH_TYPE + " - SparseCCL - flat arrays")
+    # draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
+    # draw_curve("accessors", "maroon", y_list_acc, y_median_acc, "dashed")
     # draw_curve("USM shared", "red", y_list_shared_flat, y_median_shared_flat, "dotted")
     draw_curve("Kiwaku CPU", "blue", y_list_kwk_cpu, y_median_kwk_cpu, "dashdot")
     draw_curve("Kiwaku SIMD", "purple", y_list_kwk_simd, y_median_kwk_simd, (0, (3, 1, 1, 1)))
-
     draw_curve("hand", "red", y_list_glibc_flat, y_median_glibc_flat, "dotted")
     # draw_curve("USM host", "red", y_list_host_flat, y_median_host_flat, "dashdot")
+  
+
+if BENCH_TYPE == "GPU":
+    plt.title(computer_name + " " + BENCH_TYPE + " - SparseCCL - flat arrays")
+    draw_curve("USM shared", "red", y_list_shared_flat, y_median_shared_flat, "dotted")
+    draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
+    draw_curve("accessors", "maroon", y_list_acc, y_median_acc, "dashed")
+    draw_curve("Kiwaku SYCL", "blue", y_list_kwk_sycl, y_median_kwk_sycl, (0, (3, 1, 1, 1)))
+
+
+if BENCH_TYPE == "Kiwaku-only":
+    plt.title(computer_name + " " + BENCH_TYPE + " - SparseCCL - flat arrays")
+    # draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
+    # draw_curve("accessors", "maroon", y_list_acc, y_median_acc, "dashed")
+    # draw_curve("USM shared", "red", y_list_shared_flat, y_median_shared_flat, "dotted")
+
+    draw_curve("Kiwaku CPU", "green", y_list_kwk_cpu, y_median_kwk_cpu, "dashed")
+    draw_curve("Kiwaku SIMD", "purple", y_list_kwk_simd, y_median_kwk_simd, "dotted")
+    draw_curve("Kiwaku SYCL GPU", "blue", y_list_kwk_sycl, y_median_kwk_sycl, (0, (3, 1, 1, 1)))
+
+
+if BENCH_TYPE == "CPU + GPU":
+    plt.title(computer_name + " " + BENCH_TYPE + " - SparseCCL - flat arrays")
+    # draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
+    # draw_curve("accessors", "maroon", y_list_acc, y_median_acc, "dashed")
+    # draw_curve("USM shared", "red", y_list_shared_flat, y_median_shared_flat, "dotted")
+
+
+    draw_curve("Kiwaku CPU", "blue", y_list_kwk_cpu, y_median_kwk_cpu, "dashdot")
+    draw_curve("Kiwaku SIMD", "purple", y_list_kwk_simd, y_median_kwk_simd, (0, (3, 1, 1, 1)))
+    draw_curve("hand", "red", y_list_glibc_flat, y_median_glibc_flat, "dotted")
+    # draw_curve("USM host", "red", y_list_host_flat, y_median_host_flat, "dashdot")
+
+if BENCH_TYPE == "CPU ptr vs flat":
+    plt.title(computer_name + " " + BENCH_TYPE + " - SparseCCL - flat arrays")
+    # draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
+    # draw_curve("accessors", "maroon", y_list_acc, y_median_acc, "dashed")
+    # draw_curve("USM shared", "red", y_list_shared_flat, y_median_shared_flat, "dotted")
+
+
+    draw_curve("Kiwaku CPU", "blue", y_list_kwk_cpu, y_median_kwk_cpu, "dashdot")
+    draw_curve("Kiwaku SIMD", "purple", y_list_kwk_simd, y_median_kwk_simd, (0, (3, 1, 1, 1)))
+
+    draw_curve("hand flat", "green", y_list_glibc_flat, y_median_glibc_flat, "dashed")
+    draw_curve("hand ptr", "red", y_list_glibc_ptr, y_median_glibc_ptr, "dotted")
+    # draw_curve("USM host", "red", y_list_host_flat, y_median_host_flat, "dashdot")
+
+if BENCH_TYPE == "CPU ptr":
+    plt.title(computer_name + " " + BENCH_TYPE + " - SparseCCL - flat arrays")
+
+    draw_curve("USM device", "green", y_list_device, y_median_device, "solid")
+    draw_curve("accessors", "maroon", y_list_acc, y_median_acc, "dashed")
+
+    draw_curve("USM shared flat", "blue", y_list_shared_flat, y_median_shared_flat, "dotted")
+    draw_curve("USM shared ptr", "red", y_list_shared_ptr, y_median_shared_ptr, "solid")
+
+    draw_curve("Kiwaku CPU", "blue", y_list_kwk_cpu, y_median_kwk_cpu, "solid")
+    draw_curve("Kiwaku SYCL", "blue", y_list_kwk_sycl, y_median_kwk_sycl, "dashdot")
+
+    # draw_curve("Kiwaku CPU", "blue", y_list_kwk_cpu, y_median_kwk_cpu, "dashdot")
+    # draw_curve("Kiwaku SIMD", "purple", y_list_kwk_simd, y_median_kwk_simd, (0, (3, 1, 1, 1)))
+
+    draw_curve("hand flat", "green", y_list_glibc_flat, y_median_glibc_flat, "dashed")
+    draw_curve("hand ptr", "red", y_list_glibc_ptr, y_median_glibc_ptr, "dotted")
+    # draw_curve("USM host", "red", y_list_host_flat, y_median_host_flat, "dashdot")
+
+
 
 # if FLAT_ONLY:
 #     plt.title(computer_name + " - SparseCCL - flat arrays")
@@ -625,6 +718,7 @@ def draw_tab_item_vert3(y_median_a, y_median_b, y_median_c, index):
 #        pour pouvoir les réutiliser ensuite dans le graphique.
 
 
+ENABLE_HOST=False
 
 # Affichage dans le terminal du tableau à mettre dans le LaTeX
 def draw_tab():
@@ -658,8 +752,9 @@ def draw_tab():
             print(draw_tab_item("accessors", "acc", y_median_acc))
             print("\\hline")
             print(draw_tab_item("USM shared", "sha", y_median_shared_flat))
-            print("\\hline")
-            print(draw_tab_item("USM host", "hos", y_median_host_flat))
+            if ENABLE_HOST:
+                print("\\hline")
+                print(draw_tab_item("USM host", "hos", y_median_host_flat))
         else: # tableau flat vs graphe ptr
 
             print("\\hline\\hline")
@@ -671,10 +766,11 @@ def draw_tab():
             # print("TODO : mettre host flat ici")
             # print("\\hline")
             # Host flat à remplacer par la valeur déjà dans le papier
-            print(draw_tab_item("USM host flat", "h\\_f", y_median_host_flat))
-            print("\\hline")
-            print(draw_tab_item("USM host ptr", "h\\_p", y_median_host_ptr))
-            print("\\hline")
+            if ENABLE_HOST:
+                print(draw_tab_item("USM host flat", "h\\_f", y_median_host_flat))
+                print("\\hline")
+                print(draw_tab_item("USM host ptr", "h\\_p", y_median_host_ptr))
+                print("\\hline")
             print(draw_tab_item("cpu flat", "c\\_f", y_median_glibc_flat))
             print("\\hline")
             print(draw_tab_item("cpu ptr", "c\\_p", y_median_glibc_ptr))
