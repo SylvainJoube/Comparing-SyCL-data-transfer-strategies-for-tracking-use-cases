@@ -1688,7 +1688,7 @@ namespace traccc {
 
 
 
-
+            kwk::sycl::context{::sycl::cpu_selector_v};
 
             // ============================ KIWAKU ============================
             // Exécution du kernel
@@ -1699,9 +1699,31 @@ namespace traccc {
               // const unsigned int total_module_count_const = total_module_count;
               const unsigned int max_cell_count_per_module = 1000;
   
+              auto get_right_ctx = [&]()
+              {
+                if (bench25::CHOOSEN_BACKEND == bench25::backend_t::CPU)
+                {
+                  return kwk::sycl::context{::sycl::cpu_selector_v};
+                }
+                if (bench25::CHOOSEN_BACKEND == bench25::backend_t::GPU)
+                {
+                  return kwk::sycl::context{::sycl::gpu_selector_v};
+                }
+                log("!!!!!!!!!!ERROR: get_right_ctx UNKNOWN BACKEND.");
+                std::terminate();
+                return ::kwk::sycl::default_context;
+              };
+
               // ::kwk::sycl::default_context
               // ::kwk::cpu
-              auto kwk_context = ::kwk::sycl::default_context;
+              auto kwk_context = get_right_ctx();
+
+              sycl::device my_device = kwk_context.get_device();
+              std::string device_name = my_device.get_info<sycl::info::device::name>();
+
+              log("KIWAKU DEVICE NAME: " + device_name);
+
+              
 
               // Kiwaku views
               [[maybe_unused]] auto kwk_in_cells   = kwk::view{kwk::source = b.flat_input.cells, kwk::of_size(total_cell_count)};
@@ -2578,7 +2600,7 @@ namespace traccc {
                 if (CURRENT_MODE == kiwaku_sycl) continue;
             }
 
-            //if (CURRENT_MODE == host_USM) continue; // TEMP ACAT : prend trooop de temps
+            if (CURRENT_MODE == host_USM) continue; // TEMP ACAT : prend trooop de temps
             
             //ignore_allocation_times = (ignore_at == 1);
             
@@ -2657,12 +2679,20 @@ namespace traccc {
 
     void run_single_test_generic_traccc([[maybe_unused]] std::string computer_name,
                              uint test_id, uint run_count) {
+
+        log("run_single_test_generic_traccc");
+
+        bench25::print_choosen_backend();
+        if (bench25::CHOOSEN_BACKEND == bench25::backend_t::CPU) log("=====!!CPU!!=====");
+        if (bench25::CHOOSEN_BACKEND == bench25::backend_t::GPU) log("=====!!G!P!U!!=====");
+
+
         std::string file_name_prefix = "_ld" + std::to_string(base_traccc_repeat_load_count); // 02
         std::string file_name_const_part = file_name_prefix + "_run" + std::to_string(run_count) + ".t";
 
         std::string f_dev_prefix = "UNKNOWN_DEVICE";
-        if (bench25::backend_t::CPU) f_dev_prefix = "CPU";
-        if (bench25::backend_t::GPU) f_dev_prefix = "GPU";
+        if (bench25::CHOOSEN_BACKEND == bench25::backend_t::CPU) f_dev_prefix = "CPU";
+        if (bench25::CHOOSEN_BACKEND == bench25::backend_t::GPU) f_dev_prefix = "GPU";
 
         f_dev_prefix += "_" + bench25::fprefix();
 
@@ -2681,6 +2711,9 @@ namespace traccc {
         bench25::use_file = false;
         std::string out_dir = std::string(std::filesystem::current_path()) + "/output/human_readable/";
         std::string bench25_name_full;
+
+        log("run_single_test_generic_traccc v2");
+        bench25::print_choosen_backend();
 
         switch (test_id) {
         //reset_bench_variables();
