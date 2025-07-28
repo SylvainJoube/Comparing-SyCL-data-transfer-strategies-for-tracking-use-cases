@@ -63,14 +63,22 @@ namespace bench25
     return (static_cast<T>(rand()) / static_cast<T>(RAND_MAX)) * (max - min) + min; 
   }
 
-  enum backend_t { GPU, CPU };
+  enum backend_t { GPU, CPU, UNKNOWN };
 
   // Indiqué dans les options lors du lancement
-  backend_t CHOOSEN_BACKEND = CPU;
+  backend_t CHOOSEN_BACKEND = UNKNOWN;
 
   // Mis en variable globale pour aller plus vite
   bool use_file = false;
   std::ofstream f_log;  // tous les logs, human-readable
   // std::ofstream f_plot; // seulement les infos à plot -> j'essaie de plot selon ce que j'ai déjà fait pour ACAT
+
+  void print_choosen_backend()
+  {
+    std::cout << "====== print_choosen_backend ";
+    if (CHOOSEN_BACKEND == backend_t::CPU) { std::cout << "CPU"; }
+    if (CHOOSEN_BACKEND == backend_t::GPU) { std::cout << "GPU"; }
+    if (CHOOSEN_BACKEND == backend_t::UNKNOWN) { std::cout << "UNKNOWN"; }
+  }
   
 }
