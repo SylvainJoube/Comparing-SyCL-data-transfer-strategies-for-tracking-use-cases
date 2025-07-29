@@ -58,7 +58,10 @@ export ICPX_FLAGS=""
 # Nvidia (si x86_64 ne fonctionne pas, prendre spir64)
 export ICPX_FLAGS="-fsycl-targets=nvptx64-nvidia-cuda,x86_64"
 
-icpx sparse_ccl.cpp constants.cc progress.cc utils.cc \
+# J'ai supprimé les .cc pour éviter les soucis
+# icpx sparse_ccl.cpp constants.cc progress.cc utils.cc \
+
+icpx sparse_ccl.cpp \
 -o sparseccl \
 -ffp-model=precise \
 -DNDEBUG \
@@ -80,8 +83,7 @@ ${ICPX_FLAGS} \
 ```bash
 export SCCL_DEPS_DIR="/home/sylvainj/SparseCCL/dependencies" &&\
 export EVE_FLAG="-mavx2 -mfma" &&\
-export ICPX_FLAGS="-fsycl-targets=nvptx64-nvidia-cuda,x86_64"
-
+export ICPX_FLAGS="-fsycl-targets=nvptx64-nvidia-cuda,x86_64" &&\
 cd /home/sylvainj/SparseCCL/Comparing-SyCL-data-transfer-strategies-for-tracking-use-cases/src
 
 ```
@@ -97,7 +99,25 @@ cd /home/sylvainj/SparseCCL/Comparing-SyCL-data-transfer-strategies-for-tracking
 
 ```bash
 ./sparseccl GPU 10 1
+./sparseccl GPU 10 5
 ```
+
+### Plot
+
+```
+
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 
