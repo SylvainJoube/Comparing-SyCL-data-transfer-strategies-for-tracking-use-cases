@@ -641,7 +641,7 @@ namespace traccc {
 
         // Nouveau timer
         int t_alloc_native, t_alloc_sycl, t_fill, t_copy, t_read, t_dealloc_sycl, t_dealloc_native;
-        static const uint kernel_count = 2;
+        static const uint kernel_count = 4; // BENCH25 CHANGEMENT MANUSCRIT DE THÈSE POUR LA STABILITÉ
         int t_kernel[kernel_count];
     };
 
@@ -901,7 +901,9 @@ namespace traccc {
             ||  (b.mode == sycl_mode::kiwaku_cpu)  
             ||  (b.mode == sycl_mode::kiwaku_simd)  
             ||  (b.mode == sycl_mode::kiwaku_sycl)  
-            ||  (b.mode == sycl_mode::kiwaku_sycl_nodir) )
+            ||  (b.mode == sycl_mode::kiwaku_sycl_nodir)
+            ||  (b.mode == sycl_mode::std_seq)
+            ||  (b.mode == sycl_mode::std_unseq) )
             {
                 b.flat_input.cells  = new input_cell[total_cell_count];
                 b.flat_output.cells = new output_cell[total_cell_count];
@@ -2503,7 +2505,7 @@ namespace traccc {
             if (bench25::use_file)
             {
               std::string device_name = sycl_q.get_device().get_info<sycl::info::device::name>();
-              bench25::f_log << "Using SYCL device: " << device_name << "\n\n";
+              bench25::f_log << "Using SYCL device: " << device_name << "\n";
             }
 
             bench_variables bench;
@@ -2585,6 +2587,7 @@ namespace traccc {
         // Je laisse tous les champs pour que ça reste compatible avec ce qui existe déjà
         if (bench25::use_file)
         {
+          bench25::f_log << "\n\n================================================\n";
           switch(mode)
           {
             case shared_USM:  bench25::f_log << "shared_USM"; break;
@@ -2682,19 +2685,42 @@ namespace traccc {
 
             if (bench25::use_file)
             {
+              std::string indent = "  ";
               bench25::f_log
-              << "alloc_native: " << cres.t_alloc_native << "\n"
-              << "t_alloc_sycl: " << cres.t_alloc_sycl << "\n"
-              << "t_fill: " << cres.t_fill << "\n"
-              << "t_copy: " << cres.t_copy << "\n"
-              << "t_read: " << cres.t_read << "\n"
-              << "t_dealloc_sycl: " << cres.t_dealloc_sycl << "\n"
-              << "t_dealloc_native: " << cres.t_dealloc_native << "\n"
-              << "kernel_count: " << cres.kernel_count << "\n";
+              << indent
+              << "Iteration " + std::to_string(rpt+1) + " on " + std::to_string(REPEAT_COUNT_REALLOC)
+              << "\n";
+
+              bench25::f_log
+              << indent
+              << "t_copy: " << cres.t_copy << "\n";
+
+              bench25::f_log
+              << indent
+              << "t_read: " << cres.t_read << "\n";
+
               for (uint ik = 0; ik < cres.kernel_count; ++ik) {
-                  bench25::f_log << "kernel(" << ik << "): " << cres.t_kernel[ik] << "\n";
+                bench25::f_log
+                << indent
+                << "kernel(" << ik << "): " 
+                << cres.t_kernel[ik] 
+                << "\n";
               }
-              bench25::f_log << "\n";
+
+
+              // bench25::f_log
+              // << "alloc_native: " << cres.t_alloc_native << "\n"
+              // << "t_alloc_sycl: " << cres.t_alloc_sycl << "\n"
+              // << "t_fill: " << cres.t_fill << "\n"
+              // << "t_copy: " << cres.t_copy << "\n"
+              // << "t_read: " << cres.t_read << "\n"
+              // << "t_dealloc_sycl: " << cres.t_dealloc_sycl << "\n"
+              // << "t_dealloc_native: " << cres.t_dealloc_native << "\n"
+              // << "kernel_count: " << cres.kernel_count << "\n";
+              // for (uint ik = 0; ik < cres.kernel_count; ++ik) {
+              //     bench25::f_log << "kernel(" << ik << "): " << cres.t_kernel[ik] << "\n";
+              // }
+              // bench25::f_log << "\n";
             }
 
             progress_increment();
@@ -2753,17 +2779,22 @@ namespace traccc {
             }
 
             switch (imode) {
-            case 0: CURRENT_MODE = sycl_mode::shared_USM; break;
+            case 0: CURRENT_MODE = sycl_mode::device_USM; break;
             case 1: CURRENT_MODE = sycl_mode::glibc; break;
             case 2: CURRENT_MODE = sycl_mode::host_USM; break;
-            case 3: CURRENT_MODE = sycl_mode::device_USM; break;
+            case 3: CURRENT_MODE = sycl_mode::shared_USM; break;
             case 4: CURRENT_MODE = sycl_mode::accessors; break;
             case 5: CURRENT_MODE = sycl_mode::kiwaku_cpu; break;
             case 6: CURRENT_MODE = sycl_mode::kiwaku_simd; break;
             case 7: CURRENT_MODE = sycl_mode::kiwaku_sycl; break;
             case 8: CURRENT_MODE = sycl_mode::kiwaku_sycl_nodir; break;
+            case 9: CURRENT_MODE = sycl_mode::std_seq; break;
+            case 10: CURRENT_MODE = sycl_mode::std_unseq; break;
             default : break;
             }
+
+            if (CURRENT_MODE == kiwaku_simd) continue; // OSEF de SIMD ça march pas de toute façon
+            if (CURRENT_MODE == host_USM) continue; // TEMP ACAT : prend trooop de temps
 
             if (memory_strategy == pointer_graph) {
                 if (CURRENT_MODE == device_USM) continue;
@@ -2772,9 +2803,10 @@ namespace traccc {
                 if (CURRENT_MODE == kiwaku_simd) continue;
                 if (CURRENT_MODE == kiwaku_sycl) continue;
                 if (CURRENT_MODE == kiwaku_sycl_nodir) continue;
+                if (CURRENT_MODE == std_seq) continue;
+                if (CURRENT_MODE == std_unseq) continue;
             }
 
-            if (CURRENT_MODE == host_USM) continue; // TEMP ACAT : prend trooop de temps
             
             //ignore_allocation_times = (ignore_at == 1);
             
@@ -3023,6 +3055,20 @@ namespace traccc {
             // 1 et 2 seulement
             // modifié en 2 seulement pour graphe ptr
             for (int itest = ACAT_START_TEST_INDEX; itest <= ACAT_STOP_TEST_INDEX; ++itest) { // --> 6 pour prendre en compte sparsity
+                run_single_test_generic_traccc(runtime_environment.computer_name, itest, irun);
+            }
+        }
+    }
+
+    void run_all_traccc_acat_benchs_manuscrit_these() {
+
+        log("=====================================");
+        base_traccc_repeat_load_count = runtime_environment.repeat_load_count;
+
+        // Tests to compare against, to check graphs validity
+        for (int irun = 1; irun <= runtime_environment.runs_count; ++irun) {
+            // 1 seulement, osef graphe de pointeurs
+            for (int itest = MANUSCRIT_THESE_START_TEST_INDEX; itest <= MANUSCRIT_THESE_STOP_TEST_INDEX; ++itest) {
                 run_single_test_generic_traccc(runtime_environment.computer_name, itest, irun);
             }
         }

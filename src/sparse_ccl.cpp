@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
         std::terminate();
     }
 
+    bench25::print_choosen_backend();
 
     int load_count = 1 ;
     if (argc>2) { load_count = atoi(argv[2]) ; }
@@ -91,9 +92,11 @@ int main(int argc, char *argv[])
 
     REPEAT_COUNT_REALLOC = arg_repeat; // nombre de fois que le test doit être lancé (défini dans le main)
 
-    REPEAT_COUNT_ONLY_PARALLEL = 0;//12;    
+    REPEAT_COUNT_ONLY_PARALLEL = 0;//12;   
+    bench25::print_choosen_backend(); 
 
-    traccc::run_all_traccc_acat_benchs_generic();
+    traccc::run_all_traccc_acat_benchs_manuscrit_these();
+    // traccc::run_all_traccc_acat_benchs_generic();
 
     return 0;
 }

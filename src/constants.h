@@ -120,6 +120,8 @@ uint get_computer_repeat_load_count(uint computer_id) ;
 
 const int ACAT_START_TEST_INDEX  = 1;
 const int ACAT_STOP_TEST_INDEX   = 2;
+const int MANUSCRIT_THESE_START_TEST_INDEX  = 1;
+const int MANUSCRIT_THESE_STOP_TEST_INDEX   = 1;
 const int ACAT_RUN_COUNT         = 1;
 int ACAT_REPEAT_LOAD_COUNT = 10;
 
