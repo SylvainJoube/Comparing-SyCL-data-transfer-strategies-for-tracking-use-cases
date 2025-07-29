@@ -571,6 +571,8 @@ data_type g_expected_sum;
         traccc_main_sequence(myfile, sycl_mode::kiwaku_simd, false);
         traccc_main_sequence(myfile, sycl_mode::kiwaku_sycl, false);
         traccc_main_sequence(myfile, sycl_mode::kiwaku_sycl_nodir, false);
+        traccc_main_sequence(myfile, sycl_mode::std_seq, false);
+        traccc_main_sequence(myfile, sycl_mode::std_unseq, false);
 
 
         //bench_function(myfile);

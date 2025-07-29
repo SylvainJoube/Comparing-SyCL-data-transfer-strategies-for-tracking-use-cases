@@ -383,6 +383,8 @@ int mode_to_int(sycl_mode m) {
   case kiwaku_simd : return 51;
   case kiwaku_sycl : return 52;
   case kiwaku_sycl_nodir : return 53;
+  case std_seq : return 54;
+  case std_unseq : return 55;
   }
   return -1;
 }
@@ -398,6 +400,8 @@ std::string mode_to_string(sycl_mode m) {
   case kiwaku_simd : return "kiwaku_simd";
   case kiwaku_sycl : return "kiwaku_sycl";
   case kiwaku_sycl_nodir : return "kiwaku_sycl_nodir";
+  case std_seq : return "std_seq";
+  case std_unseq : return "std_unseq";
   }
   return "unknown";
 }

@@ -3,6 +3,9 @@
 #include <filesystem>
 #include <fstream>
 #include <chrono>
+#include <algorithm>
+#include <numeric>
+#include <execution> // don't forget the -ltbb compiler flag for parallel execution, if applicable
 
 // file
 #include <sys/stat.h>
@@ -1455,7 +1458,10 @@ namespace traccc {
 
 
             // Exécution du kernel
-            if ( b.mode == sycl_mode::glibc ) {
+            if  ( ( b.mode == sycl_mode::glibc )
+            ||    ( b.mode == sycl_mode::std_seq )
+            ||    ( b.mode == sycl_mode::std_unseq )
+                ) {
                 // ==== parallel for ====
 
                 const unsigned int total_module_count_const = total_module_count;
@@ -1472,65 +1478,99 @@ namespace traccc {
                 traccc::flat_output_module * flat_modules_out_kern  = b.flat_output.modules;
                 traccc::output_cell * flat_cells_out_kern  = b.flat_output.cells;
 
-                // Lancement de plusieurs kernels à la suite
-                for (uint ik = 0; ik < b.chres.kernel_count; ++ik) {
+                auto kernel = [&](uint module_index)
+                {
+                    uint first_cindex = flat_modules_in_kern[module_index].cell_start_index;
+                    uint cell_count = flat_modules_in_kern[module_index].cell_count;
+                    // uint cell_index = first_cindex;
+                    // uint stop_cindex = first_cindex + cell_count;
 
-                    for (uint module_index = 0; module_index < total_module_count_const; ++module_index) {
-                        
-                        uint first_cindex = flat_modules_in_kern[module_index].cell_start_index;
-                        uint cell_count = flat_modules_in_kern[module_index].cell_count;
-                        // uint cell_index = first_cindex;
-                        // uint stop_cindex = first_cindex + cell_count;
+                    // The very dirty part : statically allocate a buffer of the maximum pixel density per module...
+                    uint L[max_cell_count_per_module];
 
-                        // The very dirty part : statically allocate a buffer of the maximum pixel density per module...
-                        uint L[max_cell_count_per_module];
+                    for (uint ic = 0; ic < cell_count; ++ic) {
+                        flat_cells_out_kern[first_cindex + ic].label = 0;
+                        // init oublié ?
+                        L[ic] = 0; /// max_cell_count_per_module
+                    }
 
-                        for (uint ic = 0; ic < cell_count; ++ic) {
-                            flat_cells_out_kern[first_cindex + ic].label = 0;
-                            // init oublié ?
-                            L[ic] = 0; /// max_cell_count_per_module
-                        }
+                    unsigned int start_j = 0;
+                    for (unsigned int i=0; i < cell_count; ++i){
+                        L[i] = i;
+                        int ai = i;
+                        if (i > 0){
 
-                        unsigned int start_j = 0;
-                        for (unsigned int i=0; i < cell_count; ++i){
-                            L[i] = i;
-                            int ai = i;
-                            if (i > 0){
+                            const input_cell &ci = flat_cells_in_kern[first_cindex + i];
 
-                                const input_cell &ci = flat_cells_in_kern[first_cindex + i];
-
-                                for (unsigned int j = start_j; j < i; ++j){
-                                    const input_cell &cj = flat_cells_in_kern[first_cindex + j];
-                                    if (is_adjacent(ci, cj)){
-                                        ai = make_union(L, ai, find_root(L, j));
-                                    } else if (is_far_enough(ci, cj)){
-                                        ++start_j;
-                                    }
+                            for (unsigned int j = start_j; j < i; ++j){
+                                const input_cell &cj = flat_cells_in_kern[first_cindex + j];
+                                if (is_adjacent(ci, cj)){
+                                    ai = make_union(L, ai, find_root(L, j));
+                                } else if (is_far_enough(ci, cj)){
+                                    ++start_j;
                                 }
                             }
                         }
-
-                        // second scan: transitive closure
-                        uint labels = 0;
-                        for (unsigned int i = 0; i < cell_count; ++i){
-                            unsigned int l = 0;
-                            if (L[i] == i){
-                                ++labels;
-                                l = labels; 
-                            } else {
-                                l = L[L[i]];
-                            }
-                            L[i] = l;
-                        }
-
-                        // Update the output values
-                        for (unsigned int i = 0; i < cell_count; ++i){
-                            flat_cells_out_kern[first_cindex + i].label = L[i];
-                        }
-                        flat_modules_out_kern[module_index].cluster_count = labels;
                     }
-                    b.chres.t_kernel[ik] = chrono.reset();
+
+                    // second scan: transitive closure
+                    uint labels = 0;
+                    for (unsigned int i = 0; i < cell_count; ++i){
+                        unsigned int l = 0;
+                        if (L[i] == i){
+                            ++labels;
+                            l = labels; 
+                        } else {
+                            l = L[L[i]];
+                        }
+                        L[i] = l;
+                    }
+
+                    // Update the output values
+                    for (unsigned int i = 0; i < cell_count; ++i){
+                        flat_cells_out_kern[first_cindex + i].label = L[i];
+                    }
+                    flat_modules_out_kern[module_index].cluster_count = labels;
+                };
+
+                // Kernel à la main avec une bouche for
+                if ( b.mode == sycl_mode::glibc )
+                {
+                    for (uint ik = 0; ik < b.chres.kernel_count; ++ik)
+                    {
+                        for (uint module_index = 0; module_index < total_module_count_const; ++module_index)
+                        {
+                            kernel(module_index);
+                        }
+                        b.chres.t_kernel[ik] = chrono.reset();
+                    }
                 }
+
+                // Kernel via std_seq
+                if ( b.mode == sycl_mode::std_seq )
+                {
+                    for (uint ik = 0; ik < b.chres.kernel_count; ++ik)
+                    {
+                        std::vector<int> v(total_module_count_const);
+                        std::iota(v.begin(), v.end(), 0);
+                        std::for_each(std::execution::seq, v.begin(), v.end(), kernel);
+                        b.chres.t_kernel[ik] = chrono.reset();
+                    }
+                }
+
+                // Kernel via std_unseq
+                if ( b.mode == sycl_mode::std_unseq )
+                {
+                    for (uint ik = 0; ik < b.chres.kernel_count; ++ik)
+                    {
+                        std::vector<int> v(total_module_count_const);
+                        std::iota(v.begin(), v.end(), 0);
+                        std::for_each(std::execution::unseq, v.begin(), v.end(), kernel);
+                        b.chres.t_kernel[ik] = chrono.reset();
+                    }
+                }
+
+                
             }
 
             // ================================================================
@@ -2352,7 +2392,9 @@ namespace traccc {
             || (b.mode == sycl_mode::kiwaku_cpu)
             || (b.mode == sycl_mode::kiwaku_simd)
             || (b.mode == sycl_mode::kiwaku_sycl)
-            || (b.mode == sycl_mode::kiwaku_sycl_nodir) ) 
+            || (b.mode == sycl_mode::kiwaku_sycl_nodir)
+            || (b.mode == sycl_mode::std_seq)
+            || (b.mode == sycl_mode::std_unseq) ) 
             {
                 delete[] b.flat_input.cells;
                 delete[] b.flat_output.cells;
@@ -2599,6 +2641,8 @@ namespace traccc {
             case kiwaku_simd: bench25::f_log << "kiwaku_simd"; break;
             case kiwaku_sycl: bench25::f_log << "kiwaku_sycl"; break;
             case kiwaku_sycl_nodir: bench25::f_log << "kiwaku_sycl_nodir"; break;
+            case std_seq:     bench25::f_log << "std_seq"; break;
+            case std_unseq:   bench25::f_log << "std_unseq"; break;
             default:          bench25::f_log << "!!!BACKEND INCONNU!!! sycl_mode = ???"; break;
           }
           bench25::f_log << " - " << mem_strategy_to_int(mstrat) << std::endl;
@@ -2759,7 +2803,7 @@ namespace traccc {
         
         //traccc_chrono_results cres;
 
-        for (int imode = 0; imode <= 8; ++imode) // 2025 : passage de 4 à 8 pour inclure KIWAKU
+        for (int imode = 0; imode <= 10; ++imode) // 2025 : passage de 4 à 10 pour inclure KIWAKU
         //for (int ignore_at = 0; ignore_at <= 1; ++ignore_at)
         for (int imcp = 0; imcp <= 1; ++imcp)
         {
@@ -2781,15 +2825,15 @@ namespace traccc {
             switch (imode) {
             case 0: CURRENT_MODE = sycl_mode::device_USM; break;
             case 1: CURRENT_MODE = sycl_mode::glibc; break;
-            case 2: CURRENT_MODE = sycl_mode::host_USM; break;
-            case 3: CURRENT_MODE = sycl_mode::shared_USM; break;
+            case 2: CURRENT_MODE = sycl_mode::std_seq; break;
+            case 3: CURRENT_MODE = sycl_mode::std_unseq; break;
             case 4: CURRENT_MODE = sycl_mode::accessors; break;
             case 5: CURRENT_MODE = sycl_mode::kiwaku_cpu; break;
             case 6: CURRENT_MODE = sycl_mode::kiwaku_simd; break;
             case 7: CURRENT_MODE = sycl_mode::kiwaku_sycl; break;
             case 8: CURRENT_MODE = sycl_mode::kiwaku_sycl_nodir; break;
-            case 9: CURRENT_MODE = sycl_mode::std_seq; break;
-            case 10: CURRENT_MODE = sycl_mode::std_unseq; break;
+            case 9: CURRENT_MODE = sycl_mode::host_USM; break;
+            case 10: CURRENT_MODE = sycl_mode::shared_USM; break;
             default : break;
             }
 

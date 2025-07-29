@@ -100,6 +100,7 @@ cd /home/sylvainj/SparseCCL/Comparing-SyCL-data-transfer-strategies-for-tracking
 ```bash
 ./sparseccl GPU 10 1
 ./sparseccl GPU 10 5
+./sparseccl GPU 300 3
 ```
 
 ### Plot
