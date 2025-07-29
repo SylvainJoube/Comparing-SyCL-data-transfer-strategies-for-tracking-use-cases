@@ -1,0 +1,60 @@
+
+
+================================================
+shared_USM - 2
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 1 on 3
+  t_copy: -1
+  t_read: 1562829
+  kernel(0): 4231493
+  kernel(1): 4854160
+  kernel(2): 4760508
+  kernel(3): 4758405
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 2 on 3
+  t_copy: -1
+  t_read: 1562558
+  kernel(0): 4204939
+  kernel(1): 4854651
+  kernel(2): 4762605
+  kernel(3): 4763307
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 3 on 3
+  t_copy: -1
+  t_read: 1565980
+  kernel(0): 4210676
+  kernel(1): 4853681
+  kernel(2): 4765433
+  kernel(3): 4766739
+
+
+================================================
+glibc - 2
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 1 on 3
+  t_copy: -1
+  t_read: 268412
+  kernel(0): 12652348
+  kernel(1): 12638922
+  kernel(2): 12643277
+  kernel(3): 12642138
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 2 on 3
+  t_copy: -1
+  t_read: 268394
+  kernel(0): 12667487
+  kernel(1): 12647986
+  kernel(2): 12651176
+  kernel(3): 12650388
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 3 on 3
+  t_copy: -1
+  t_read: 268372
+  kernel(0): 12667865
+  kernel(1): 12648759
+  kernel(2): 12650845
+  kernel(3): 12651691
+
+
+================================================
+device_USM - 2

@@ -1,0 +1,196 @@
+shared_USM
+
+================================================
+ - 2
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 1 on 3
+  t_copy: -1
+  t_read: 26298
+  kernel(0): 47518
+  kernel(1): 10588
+  kernel(2): 10755
+  kernel(3): 10595
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 2 on 3
+  t_copy: -1
+  t_read: 26279
+  kernel(0): 45526
+  kernel(1): 9618
+  kernel(2): 9802
+  kernel(3): 10130
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 3 on 3
+  t_copy: -1
+  t_read: 26221
+  kernel(0): 47140
+  kernel(1): 9960
+  kernel(2): 9912
+  kernel(3): 9740
+glibc
+
+================================================
+ - 2
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 1 on 3
+  t_copy: -1
+  t_read: 2906
+  kernel(0): 126934
+  kernel(1): 125730
+  kernel(2): 125687
+  kernel(3): 125683
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 2 on 3
+  t_copy: -1
+  t_read: 2891
+  kernel(0): 125945
+  kernel(1): 125768
+  kernel(2): 125825
+  kernel(3): 125619
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 3 on 3
+  t_copy: -1
+  t_read: 2861
+  kernel(0): 125996
+  kernel(1): 125661
+  kernel(2): 125878
+  kernel(3): 125867
+device_USM
+
+================================================
+ - 2
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 1 on 3
+  t_copy: 13340
+  t_read: 2701
+  kernel(0): 9862
+  kernel(1): 9761
+  kernel(2): 9942
+  kernel(3): 10265
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 2 on 3
+  t_copy: 13032
+  t_read: 2674
+  kernel(0): 10412
+  kernel(1): 10323
+  kernel(2): 10582
+  kernel(3): 10581
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 3 on 3
+  t_copy: 13046
+  t_read: 2662
+  kernel(0): 10624
+  kernel(1): 9743
+  kernel(2): 9963
+  kernel(3): 10124
+accessors
+
+================================================
+ - 2
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 1 on 3
+  t_copy: -1
+  t_read: 2699
+  kernel(0): 23545
+  kernel(1): 9843
+  kernel(2): 9750
+  kernel(3): 9737
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 2 on 3
+  t_copy: -1
+  t_read: 2740
+  kernel(0): 23230
+  kernel(1): 10092
+  kernel(2): 9880
+  kernel(3): 9731
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 3 on 3
+  t_copy: -1
+  t_read: 2768
+  kernel(0): 22999
+  kernel(1): 10078
+  kernel(2): 9967
+  kernel(3): 9872
+kiwaku_cpu
+
+================================================
+ - 2
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 1 on 3
+  t_copy: -1
+  t_read: 2919
+  kernel(0): 122048
+  kernel(1): 122185
+  kernel(2): 122057
+  kernel(3): 121813
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 2 on 3
+  t_copy: -1
+  t_read: 2900
+  kernel(0): 121682
+  kernel(1): 122171
+  kernel(2): 122013
+  kernel(3): 122058
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 3 on 3
+  t_copy: -1
+  t_read: 2915
+  kernel(0): 121957
+  kernel(1): 122113
+  kernel(2): 122038
+  kernel(3): 121780
+kiwaku_sycl
+
+================================================
+ - 2
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 1 on 3
+  t_copy: -1
+  t_read: 2690
+  kernel(0): 24292
+  kernel(1): 9770
+  kernel(2): 9978
+  kernel(3): 9708
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 2 on 3
+  t_copy: -1
+  t_read: 2699
+  kernel(0): 24401
+  kernel(1): 9685
+  kernel(2): 9875
+  kernel(3): 10053
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 3 on 3
+  t_copy: -1
+  t_read: 2675
+  kernel(0): 24336
+  kernel(1): 9959
+  kernel(2): 10154
+  kernel(3): 10087
+kiwaku_sycl_nodir
+
+================================================
+ - 2
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 1 on 3
+  t_copy: -1
+  t_read: 2733
+  kernel(0): 30523
+  kernel(1): 9806
+  kernel(2): 10753
+  kernel(3): 9876
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 2 on 3
+  t_copy: -1
+  t_read: 2667
+  kernel(0): 30554
+  kernel(1): 9794
+  kernel(2): 9673
+  kernel(3): 9804
+Using SYCL device: NVIDIA GeForce RTX 2080 Ti
+  Iteration 3 on 3
+  t_copy: -1
+  t_read: 2654
+  kernel(0): 30718
+  kernel(1): 9856
+  kernel(2): 9985
+  kernel(3): 9968
