@@ -18,7 +18,7 @@
 #define DATA_TYPE unsigned int // TODO : try with unsigned int
 using data_type = DATA_TYPE;
 //using data_type_sum = unsigned long long;
-enum sycl_mode {shared_USM, device_USM, host_USM, accessors, glibc, kiwaku_cpu, kiwaku_simd, kiwaku_sycl};
+enum sycl_mode {shared_USM, device_USM, host_USM, accessors, glibc, kiwaku_cpu, kiwaku_simd, kiwaku_sycl, kiwaku_sycl_nodir};
 //enum dataset_type {implicit_USM, device_USM, host_USM, accessors};
 
 

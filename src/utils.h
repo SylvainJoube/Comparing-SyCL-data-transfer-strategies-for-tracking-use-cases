@@ -382,6 +382,7 @@ int mode_to_int(sycl_mode m) {
   case kiwaku_cpu : return 50;
   case kiwaku_simd : return 51;
   case kiwaku_sycl : return 52;
+  case kiwaku_sycl_nodir : return 53;
   }
   return -1;
 }
@@ -396,6 +397,7 @@ std::string mode_to_string(sycl_mode m) {
   case kiwaku_cpu : return "kiwaku_cpu";
   case kiwaku_simd : return "kiwaku_simd";
   case kiwaku_sycl : return "kiwaku_sycl";
+  case kiwaku_sycl_nodir : return "kiwaku_sycl_nodir";
   }
   return "unknown";
 }

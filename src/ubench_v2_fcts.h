@@ -570,6 +570,7 @@ data_type g_expected_sum;
         traccc_main_sequence(myfile, sycl_mode::kiwaku_cpu,  false);
         traccc_main_sequence(myfile, sycl_mode::kiwaku_simd, false);
         traccc_main_sequence(myfile, sycl_mode::kiwaku_sycl, false);
+        traccc_main_sequence(myfile, sycl_mode::kiwaku_sycl_nodir, false);
 
 
         //bench_function(myfile);
